@@ -7,6 +7,7 @@ import SaveModal from './components/SaveModal';
 import SongsModal from './components/SongsModal';
 import DrumMachineModal from './components/DrumMachineModal';
 import TunerModal from './components/TunerModal';
+import RhymeFinderModal from './components/RhymeFinderModal';
 import Toast from './components/Toast';
 import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
@@ -24,6 +25,7 @@ export default function App() {
   const [modalSongsOpen, setModalSongsOpen] = useState(false);
   const [drumOpen, setDrumOpen] = useState(false);
   const [tunerOpen, setTunerOpen] = useState(false);
+  const [rhymeOpen, setRhymeOpen] = useState(false);
   const [toast, setToast] = useState(null);
   // Arranca editable (documento en blanco, listo para escribir); al cargar
   // una canción pasa a solo-lectura para que deslizar/scrollear en el celu
@@ -148,6 +150,11 @@ export default function App() {
     setTunerOpen(true);
   }
 
+  function openRhymeFinder() {
+    pushNav(() => setRhymeOpen(false));
+    setRhymeOpen(true);
+  }
+
   function loadSong(song) {
     setRawText(song.text);
     setSongTitle(song.title);
@@ -173,6 +180,7 @@ export default function App() {
         onToggleEditMode={toggleEditMode}
         onOpenDrumMachine={openDrumMachine}
         onOpenTuner={openTuner}
+        onOpenRhymeFinder={openRhymeFinder}
       />
 
       <div className="main">
@@ -227,6 +235,7 @@ export default function App() {
 
       <DrumMachineModal open={drumOpen} onClose={() => goBack(1)} />
       <TunerModal open={tunerOpen} onClose={() => goBack(1)} />
+      <RhymeFinderModal open={rhymeOpen} onClose={() => goBack(1)} />
 
       <Toast toast={toast} onUndo={handleUndo} />
     </div>

@@ -230,14 +230,22 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
   function startLongPress(x, y) {
     if (!editable) return;
     longPressStart.current = { x, y };
+    // Calculamos sobre qué palabra está el dedo AHORA (apenas toca), no
+    // cuando se cumplen los ms del long-press: si el editor se
+    // re-renderiza durante la espera (por el debounce del tipeo, por
+    // ejemplo), recalcular tarde podría apuntar a otra columna. Leemos el
+    // texto en vivo del DOM (no la prop rawText, que puede ir un toque
+    // atrás mientras el debounce del tipeo no disparó todavía) para que la
+    // columna calculada y el texto donde se busca esa línea sean siempre
+    // consistentes entre sí.
+    const editor = editorRef.current;
+    const pos = editor ? getLineColumnAtPoint(editor, x, y) : null;
+    const liveText = editor ? extractPlainText(editor) : '';
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       longPressStart.current = null;
-      const editor = editorRef.current;
-      if (!editor) return;
-      const pos = getLineColumnAtPoint(editor, x, y);
       if (!pos) return;
-      const line = rawText.split('\n')[pos.line] || '';
+      const line = liveText.split('\n')[pos.line] || '';
       const column = wordStartColumn(line, pos.column);
       setChordPrompt({ line: pos.line, column, x, y });
     }, LONG_PRESS_MS);
@@ -252,7 +260,8 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
 
   function handleChordPick(chordStr) {
     if (!chordPrompt) return;
-    onChange(insertChordAbove(rawText, chordPrompt.line, chordPrompt.column, chordStr));
+    const liveText = editorRef.current ? extractPlainText(editorRef.current) : rawText;
+    onChange(insertChordAbove(liveText, chordPrompt.line, chordPrompt.column, chordStr));
     setChordPrompt(null);
   }
 
