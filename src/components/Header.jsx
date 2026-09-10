@@ -1,4 +1,4 @@
-export default function Header({ title, onTitleChange, saved, theme, onToggleTheme, editMode, onToggleEditMode, onOpenDrumMachine }) {
+export default function Header({ title, onTitleChange, saved, theme, onToggleTheme, editMode, onToggleEditMode, onOpenDrumMachine, onOpenTuner }) {
   return (
     <div className="header">
       <span className="logo-icon">🎸</span>
@@ -11,6 +11,7 @@ export default function Header({ title, onTitleChange, saved, theme, onToggleThe
         onChange={e => onTitleChange(e.target.value)}
       />
       <span className="header-meta">{saved ? '● guardado' : ''}</span>
+      <button className="header-icon-btn" title="Afinador" onClick={onOpenTuner}>🎯</button>
       <button className="header-icon-btn" title="Batería" onClick={onOpenDrumMachine}>🥁</button>
       <button
         className={`header-icon-btn${editMode ? ' active' : ''}`}
