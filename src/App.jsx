@@ -5,6 +5,7 @@ import Fab from './components/Fab';
 import BottomBar from './components/BottomBar';
 import SaveModal from './components/SaveModal';
 import SongsModal from './components/SongsModal';
+import DrumMachineModal from './components/DrumMachineModal';
 import Toast from './components/Toast';
 import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
@@ -20,6 +21,7 @@ export default function App() {
   const [theme, setThemeState] = useState(getTheme());
   const [modalSaveOpen, setModalSaveOpen] = useState(false);
   const [modalSongsOpen, setModalSongsOpen] = useState(false);
+  const [drumOpen, setDrumOpen] = useState(false);
   const [toast, setToast] = useState(null);
   // Arranca editable (documento en blanco, listo para escribir); al cargar
   // una canción pasa a solo-lectura para que deslizar/scrollear en el celu
@@ -134,6 +136,11 @@ export default function App() {
     setModalSongsOpen(true);
   }
 
+  function openDrumMachine() {
+    pushNav(() => setDrumOpen(false));
+    setDrumOpen(true);
+  }
+
   function loadSong(song) {
     setRawText(song.text);
     setSongTitle(song.title);
@@ -157,6 +164,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         editMode={editMode}
         onToggleEditMode={toggleEditMode}
+        onOpenDrumMachine={openDrumMachine}
       />
 
       <div className="main">
@@ -208,6 +216,8 @@ export default function App() {
         pushNav={pushNav}
         goBack={goBack}
       />
+
+      <DrumMachineModal open={drumOpen} onClose={() => goBack(1)} />
 
       <Toast toast={toast} onUndo={handleUndo} />
     </div>

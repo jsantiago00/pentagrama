@@ -486,6 +486,26 @@ input[type=range].v-slider {
   cursor: pointer; padding: 2px 0; font-family: var(--sans);
 }
 
+/* ── Caja de ritmos ── */
+.drum-bpm-row { display: flex; align-items: center; gap: 12px; }
+.drum-bpm-label { font-size: 13px; font-weight: 700; color: var(--accent2); min-width: 66px; font-variant-numeric: tabular-nums; }
+.drum-bpm-slider { flex: 1; accent-color: var(--accent); }
+.drum-grid { display: flex; flex-direction: column; gap: 8px; }
+.drum-row { display: flex; align-items: center; gap: 8px; }
+.drum-row-label { width: 46px; font-size: 11px; color: var(--text2); flex-shrink: 0; }
+.drum-steps { display: flex; gap: 3px; flex: 1; min-width: 0; }
+.drum-step {
+  flex: 1; min-width: 0; aspect-ratio: 1; border-radius: 5px;
+  border: 0.5px solid var(--border2); background: var(--bg3);
+  cursor: pointer; padding: 0;
+}
+.drum-step.beat-start { border-left-color: var(--text3); }
+.drum-step.on { background: var(--accent); border-color: var(--accent); }
+.drum-step.current { outline: 2px solid var(--accent2); outline-offset: 1px; }
+.drum-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.drum-transport { display: flex; justify-content: center; padding-top: 4px; }
+.btn-small.playing { background: var(--red); border-color: var(--red); color: #fff; }
+
 /* Toast */
 .toast {
   position: fixed; bottom: 60px; left: 50%;
