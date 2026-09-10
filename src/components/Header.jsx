@@ -1,4 +1,4 @@
-export default function Header({ title, onTitleChange, saved, theme, onToggleTheme }) {
+export default function Header({ title, onTitleChange, saved, theme, onToggleTheme, editMode, onToggleEditMode }) {
   return (
     <div className="header">
       <span className="logo-icon">🎸</span>
@@ -11,6 +11,11 @@ export default function Header({ title, onTitleChange, saved, theme, onToggleThe
         onChange={e => onTitleChange(e.target.value)}
       />
       <span className="header-meta">{saved ? '● guardado' : ''}</span>
+      <button
+        className={`header-icon-btn${editMode ? ' active' : ''}`}
+        title={editMode ? 'Salir de edición' : 'Editar'}
+        onClick={onToggleEditMode}
+      >{editMode ? '✓' : '✏️'}</button>
       <div className="theme-switch" title="Cambiar tema" onClick={onToggleTheme}>
         <span className="knob">{theme === 'light' ? '☀' : '☾'}</span>
       </div>

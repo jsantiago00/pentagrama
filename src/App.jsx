@@ -21,8 +21,13 @@ export default function App() {
   const [modalSaveOpen, setModalSaveOpen] = useState(false);
   const [modalSongsOpen, setModalSongsOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  // Arranca editable (documento en blanco, listo para escribir); al cargar
+  // una canción pasa a solo-lectura para que deslizar/scrollear en el celu
+  // no dispare el teclado por accidente.
+  const [editMode, setEditMode] = useState(true);
 
   const editorWrapRef = useRef(null);
+  const editorHandleRef = useRef(null);
   const toastTimer = useRef(null);
   const autoscroll = useAutoscroll(editorWrapRef);
   const songs = useSongs();
@@ -66,6 +71,16 @@ export default function App() {
     setThemeState(next);
   }
 
+  function toggleEditMode() {
+    if (editMode) {
+      editorHandleRef.current?.blur();
+      setEditMode(false);
+    } else {
+      editorHandleRef.current?.enterEditSync();
+      setEditMode(true);
+    }
+  }
+
   function handleNew() {
     if (rawText.trim() && !window.confirm('¿Descartás los cambios?')) return;
     setRawText('');
@@ -73,6 +88,7 @@ export default function App() {
     setSongTitle('');
     setSemitones(0);
     autoscroll.stop();
+    setEditMode(true);
     showToast('✨ Nueva canción');
   }
 
@@ -124,6 +140,7 @@ export default function App() {
     setActiveSongId(song.id);
     setSemitones(0);
     autoscroll.stop();
+    setEditMode(false);
     showToast(`🎵 "${song.title}" cargada`);
   }
 
@@ -138,15 +155,19 @@ export default function App() {
         saved={!!activeSongId}
         theme={theme}
         onToggleTheme={toggleTheme}
+        editMode={editMode}
+        onToggleEditMode={toggleEditMode}
       />
 
       <div className="main">
         <Editor
+          ref={editorHandleRef}
           rawText={rawText}
           semitones={semitones}
           onChange={setRawText}
           wrapRef={editorWrapRef}
           onInteraction={autoscroll.stop}
+          editable={editMode}
         />
         <Fab
           scrolling={autoscroll.scrolling}

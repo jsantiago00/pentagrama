@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { isChordLine, isChordToken, transposeToken } from '../lib/chords';
 import { escHtml } from '../lib/utils';
 
@@ -95,9 +95,24 @@ function restoreCursor(root, offset) {
   placeCaret(root, r);
 }
 
-export default function Editor({ rawText, semitones, onChange, wrapRef, onInteraction }) {
+const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRef, onInteraction, editable }, ref) {
   const editorRef = useRef(null);
   const inputTimer = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    // Activa contentEditable y enfoca en el mismo tick del click para que
+    // el navegador lo reconozca como gesto del usuario y abra el teclado
+    // (si se hiciera vía estado de React, llegaría un render tarde).
+    enterEditSync() {
+      const el = editorRef.current;
+      if (!el) return;
+      el.contentEditable = 'true';
+      el.focus();
+    },
+    blur() {
+      editorRef.current?.blur();
+    },
+  }));
 
   function render() {
     const editor = editorRef.current;
@@ -123,7 +138,7 @@ export default function Editor({ rawText, semitones, onChange, wrapRef, onIntera
   useEffect(() => {
     render();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawText, semitones]);
+  }, [rawText, semitones, editable]);
 
   function flush() {
     const editor = editorRef.current;
@@ -172,8 +187,8 @@ export default function Editor({ rawText, semitones, onChange, wrapRef, onIntera
       <div
         id="editor"
         ref={editorRef}
-        className="empty"
-        contentEditable="true"
+        className={editable ? undefined : 'readonly'}
+        contentEditable={editable}
         spellCheck="false"
         data-placeholder="Pegá la letra con acordes..."
         onInput={handleInput}
@@ -182,4 +197,6 @@ export default function Editor({ rawText, semitones, onChange, wrapRef, onIntera
       />
     </div>
   );
-}
+});
+
+export default Editor;
