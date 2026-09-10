@@ -2,6 +2,8 @@
 // miles de canciones precargadas + las que agregue el usuario).
 // Preferencias livianas (tema, vista, favoritos de artista): localStorage.
 
+import { normalizeSource } from './utils';
+
 const DB_NAME = 'acordes_db';
 const DB_VERSION = 1;
 const STORE = 'songs';
@@ -10,6 +12,7 @@ const ARTIST_META_KEY = 'acordes_artist_meta';
 const SEED_FLAG_KEY = 'acordes_seed_v1_done';
 const THEME_KEY = 'acordes_theme';
 const ARTIST_VIEW_KEY = 'acordes_artist_view';
+const SCRAPER_URL_KEY = 'acordes_scraper_url';
 
 let dbPromise = null;
 function openDB() {
@@ -120,6 +123,13 @@ export function setArtistViewMode(mode) {
   localStorage.setItem(ARTIST_VIEW_KEY, mode);
 }
 
+export function getScraperUrl() {
+  return localStorage.getItem(SCRAPER_URL_KEY) || '';
+}
+export function setScraperUrl(url) {
+  localStorage.setItem(SCRAPER_URL_KEY, url.trim());
+}
+
 // Precarga (una única vez) el repertorio incluido de fábrica con la app.
 export async function seedBundledSongsIfNeeded() {
   if (localStorage.getItem(SEED_FLAG_KEY)) return;
@@ -128,14 +138,14 @@ export async function seedBundledSongsIfNeeded() {
     if (!manifestRes.ok) throw new Error('no manifest');
     const files = await manifestRes.json();
     const existing = await getSongs();
-    const existingKeys = new Set(existing.map(s => s.source || s.id));
+    const existingKeys = new Set(existing.map(s => normalizeSource(s.source) || s.id));
     const nuevas = [];
     for (const f of files) {
       const res = await fetch(`${import.meta.env.BASE_URL}data/${f}`);
       if (!res.ok) continue;
       const arr = await res.json();
       for (const s of arr) {
-        const key = s.source || s.id;
+        const key = normalizeSource(s.source) || s.id;
         if (existingKeys.has(key)) continue;
         existingKeys.add(key);
         nuevas.push(s);

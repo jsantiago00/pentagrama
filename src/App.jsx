@@ -8,6 +8,7 @@ import SongsModal from './components/SongsModal';
 import Toast from './components/Toast';
 import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
+import { useBackNav } from './hooks/useBackNav';
 import { countUniqueChords, getTransposedPlain } from './lib/chords';
 import { putSong, getTheme, setTheme as persistTheme, seedBundledSongsIfNeeded } from './lib/storage';
 
@@ -25,6 +26,7 @@ export default function App() {
   const toastTimer = useRef(null);
   const autoscroll = useAutoscroll(editorWrapRef);
   const songs = useSongs();
+  const { pushNav, goBack } = useBackNav();
 
   useEffect(() => {
     seedBundledSongsIfNeeded();
@@ -95,19 +97,25 @@ export default function App() {
     const existing = activeSongId ? songs.find(s => s.id === activeSongId) : null;
     if (existing) {
       await putSong({ ...existing, title: finalTitle, artist: finalArtist, text, updated: now });
-      setModalSaveOpen(false);
+      goBack(1);
       showToast('✅ Actualizada');
       return;
     }
     const id = Date.now().toString();
     await putSong({ id, title: finalTitle, artist: finalArtist, text, created: now, updated: now });
     setActiveSongId(id);
-    setModalSaveOpen(false);
+    goBack(1);
     showToast('💾 Guardada');
   }
 
   function openSaveModal() {
+    pushNav(() => setModalSaveOpen(false));
     setModalSaveOpen(true);
+  }
+
+  function openSongsModal() {
+    pushNav(() => setModalSongsOpen(false));
+    setModalSongsOpen(true);
   }
 
   function loadSong(song) {
@@ -116,7 +124,6 @@ export default function App() {
     setActiveSongId(song.id);
     setSemitones(0);
     autoscroll.stop();
-    setModalSongsOpen(false);
     showToast(`🎵 "${song.title}" cargada`);
   }
 
@@ -151,7 +158,7 @@ export default function App() {
           onDown={() => setSemitones(s => Math.max(-11, Math.min(11, s - 1)))}
           onReset={() => setSemitones(0)}
           onCopy={handleCopy}
-          onOpenSongs={() => setModalSongsOpen(true)}
+          onOpenSongs={openSongsModal}
         />
       </div>
 
@@ -167,17 +174,18 @@ export default function App() {
         initialTitle={songTitle}
         initialArtist={currentSongForSave?.artist || ''}
         artistOptions={existingArtistOptions}
-        onClose={() => setModalSaveOpen(false)}
+        onClose={() => goBack(1)}
         onConfirm={handleSaveConfirm}
       />
 
       <SongsModal
         open={modalSongsOpen}
-        onClose={() => setModalSongsOpen(false)}
         activeSongId={activeSongId}
         onLoadSong={loadSong}
         showToast={showToast}
         showUndoToast={showUndoToast}
+        pushNav={pushNav}
+        goBack={goBack}
       />
 
       <Toast toast={toast} onUndo={handleUndo} />

@@ -5,6 +5,8 @@ import {
   getArtistViewMode, setArtistViewMode as persistArtistViewMode,
 } from '../lib/storage';
 import { useSongs } from '../hooks/useSongs';
+import FetchSongsModal from './FetchSongsModal';
+import { normalizeSource } from '../lib/utils';
 
 function groupByArtist(songs) {
   const map = {};
@@ -23,7 +25,7 @@ function artistEmoji(name) {
   return pool[h % pool.length];
 }
 
-export default function SongsModal({ open, onClose, activeSongId, onLoadSong, showToast, showUndoToast }) {
+export default function SongsModal({ open, activeSongId, onLoadSong, showToast, showUndoToast, pushNav, goBack }) {
   const songs = useSongs();
   const [metaTick, setMetaTick] = useState(0);
   const [view, setView] = useState('artists');
@@ -33,6 +35,7 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [artistViewMode, setArtistViewModeState] = useState(getArtistViewMode());
   const [openMenu, setOpenMenu] = useState(null);
+  const [fetchOpen, setFetchOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const refreshMeta = () => setMetaTick(t => t + 1);
@@ -41,8 +44,14 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
 
   if (!open) return null;
 
+  // Cierra el modal entero de un salto, sin importar en qué vista se esté
+  // (usa goBack para que el botón "atrás" del celu quede sincronizado).
+  function closeAll() {
+    goBack(view === 'songs' ? 2 : 1);
+  }
+
   function handleOverlayClick(e) {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget) closeAll();
   }
 
   function exitSelectionMode() {
@@ -60,6 +69,7 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
     setCurrentArtist(artist);
     setSearch('');
     exitSelectionMode();
+    pushNav(goToArtists);
     setView('songs');
   }
 
@@ -129,6 +139,11 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
     });
   }
 
+  function openFetchModal() {
+    pushNav(() => setFetchOpen(false));
+    setFetchOpen(true);
+  }
+
   function importarCanciones() {
     fileInputRef.current?.click();
   }
@@ -142,8 +157,8 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
       try {
         const incoming = JSON.parse(ev.target.result);
         if (!Array.isArray(incoming)) throw new Error('El archivo no es un array JSON válido');
-        const existingKeys = new Set(songs.map(s => s.source || s.id));
-        const nuevas = incoming.filter(s => !existingKeys.has(s.source || s.id));
+        const existingKeys = new Set(songs.map(s => normalizeSource(s.source) || s.id));
+        const nuevas = incoming.filter(s => !existingKeys.has(normalizeSource(s.source) || s.id));
         putSongs(nuevas).then(() => {
           showToast(`✅ ${nuevas.length} canciones importadas (${incoming.length - nuevas.length} ya existían)`);
         });
@@ -189,7 +204,7 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
       <div className="modal" onClick={() => openMenu && setOpenMenu(null)}>
         <div className="modal-header">
           <span className="modal-title">{modalTitle}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={closeAll}>✕</button>
         </div>
 
         {view === 'artists' && (
@@ -235,6 +250,7 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
               })}
             </div>
             <div className="io-icons">
+              <button className="btn-io" title="Buscar e importar canciones de un artista" onClick={openFetchModal}>🔎 Obtener</button>
               <button className="btn-io" title="Importar canciones desde un archivo" onClick={importarCanciones}>📥 Importar</button>
               <button className="btn-io" title="Exportar todas mis canciones a un archivo" onClick={exportarCanciones}>📤 Exportar</button>
               <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChosen} />
@@ -242,10 +258,14 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
           </div>
         )}
 
+        {fetchOpen && (
+          <FetchSongsModal onClose={() => goBack(1)} showToast={showToast} existingSongs={songs} />
+        )}
+
         {view === 'songs' && (
           <div id="viewSongs" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="songs-header">
-              <button className="btn-back" onClick={goToArtists}>← artistas</button>
+              <button className="btn-back" onClick={() => goBack(1)}>← artistas</button>
               <span className="songs-artist-name">{currentArtist === '__none__' ? 'Sin artista' : currentArtist}</span>
               <span className="badge-count">{songList.length}</span>
               <button className="btn-select-mode" onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}>
@@ -278,6 +298,7 @@ export default function SongsModal({ open, onClose, activeSongId, onLoadSong, sh
                   className={`song-card ${s.id === activeSongId ? 'cur' : ''} ${selectedIds.has(s.id) ? 'checked' : ''}`}
                   onClick={() => {
                     if (selectionMode) { toggleSelected(s.id); return; }
+                    goBack(2);
                     onLoadSong(s);
                   }}
                 >
