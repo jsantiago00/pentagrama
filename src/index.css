@@ -134,6 +134,7 @@ body.light .theme-switch .knob { transform: translateX(16px); }
   outline: none;
   min-height: 100%;
   caret-color: var(--accent2);
+  -webkit-touch-callout: none;
 }
 
 #editor .chord {
@@ -440,6 +441,50 @@ input[type=range].v-slider {
   cursor: pointer; font-family: var(--sans);
 }
 .btn-io:hover { background: var(--border); }
+
+/* ── Selector circular de acordes (long-press sobre una palabra) ── */
+.chord-picker {
+  position: fixed;
+  z-index: 150;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: var(--bg2); border: 0.5px solid var(--border2);
+  border-radius: 20px; padding: 16px 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.4);
+  animation: chordPickerIn .14s ease;
+}
+@keyframes chordPickerIn { from { transform: scale(.85); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+.chord-wheel { position: relative; flex-shrink: 0; }
+.chord-wheel-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--accent-bg); border: 1.5px solid var(--accent);
+  color: var(--accent2); font-size: 16px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.chord-wheel-note {
+  position: absolute; top: 50%; left: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans);
+}
+.chord-wheel-note.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chord-quality-row {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  max-width: 240px;
+}
+.chord-quality-chip {
+  font-size: 12px; padding: 6px 10px; border-radius: 14px;
+  border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text);
+  cursor: pointer; font-family: var(--sans);
+}
+.chord-quality-chip:disabled { opacity: .4; cursor: default; }
+.chord-quality-chip:not(:disabled):hover { border-color: var(--accent); color: var(--accent2); }
+.chord-picker-cancel {
+  font-size: 12px; color: var(--text3); background: none; border: none;
+  cursor: pointer; padding: 2px 0; font-family: var(--sans);
+}
 
 /* Toast */
 .toast {

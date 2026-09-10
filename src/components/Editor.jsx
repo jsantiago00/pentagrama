@@ -1,6 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { isChordLine, isChordToken, transposeToken } from '../lib/chords';
 import { escHtml } from '../lib/utils';
+import { insertChordAbove, wordStartColumn } from '../lib/chordInsert';
+import ChordPicker from './ChordPicker';
+
+const LONG_PRESS_MS = 480;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
 
 function buildHTML(text, st) {
   if (!text) return '';
@@ -42,6 +47,37 @@ function extractPlainText(root) {
   }
   root.childNodes.forEach(walk);
   return text;
+}
+
+// Traduce una coordenada de pantalla (x,y) a (línea, columna) dentro del
+// texto, reusando la misma lógica de extractPlainText para que cuente los
+// caracteres exactamente igual que el resto del editor.
+function getLineColumnAtPoint(root, x, y) {
+  let startNode, startOffset;
+  if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (!pos) return null;
+    startNode = pos.offsetNode;
+    startOffset = pos.offset;
+  } else if (document.caretRangeFromPoint) {
+    const r = document.caretRangeFromPoint(x, y);
+    if (!r) return null;
+    startNode = r.startContainer;
+    startOffset = r.startOffset;
+  } else {
+    return null;
+  }
+  if (!root.contains(startNode)) return null;
+
+  const pre = document.createRange();
+  pre.selectNodeContents(root);
+  pre.setEnd(startNode, startOffset);
+  const textBefore = extractPlainText(pre.cloneContents());
+  const lastNL = textBefore.lastIndexOf('\n');
+  return {
+    line: textBefore.split('\n').length - 1,
+    column: textBefore.length - lastNL - 1,
+  };
 }
 
 function placeCaret(root, range) {
@@ -98,6 +134,9 @@ function restoreCursor(root, offset) {
 const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRef, onInteraction, editable }, ref) {
   const editorRef = useRef(null);
   const inputTimer = useRef(null);
+  const longPressTimer = useRef(null);
+  const longPressStart = useRef(null);
+  const [chordPrompt, setChordPrompt] = useState(null); // { line, column, x, y }
 
   useImperativeHandle(ref, () => ({
     // Activa contentEditable y enfoca en el mismo tick del click para que
@@ -182,6 +221,41 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
     flush();
   }
 
+  // ── Mantener presionado sobre una palabra → selector de acordes ──
+  function cancelLongPress() {
+    clearTimeout(longPressTimer.current);
+    longPressStart.current = null;
+  }
+
+  function startLongPress(x, y) {
+    if (!editable) return;
+    longPressStart.current = { x, y };
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      longPressStart.current = null;
+      const editor = editorRef.current;
+      if (!editor) return;
+      const pos = getLineColumnAtPoint(editor, x, y);
+      if (!pos) return;
+      const line = rawText.split('\n')[pos.line] || '';
+      const column = wordStartColumn(line, pos.column);
+      setChordPrompt({ line: pos.line, column, x, y });
+    }, LONG_PRESS_MS);
+  }
+
+  function moveLongPress(x, y) {
+    if (!longPressStart.current) return;
+    const dx = Math.abs(x - longPressStart.current.x);
+    const dy = Math.abs(y - longPressStart.current.y);
+    if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) cancelLongPress();
+  }
+
+  function handleChordPick(chordStr) {
+    if (!chordPrompt) return;
+    onChange(insertChordAbove(rawText, chordPrompt.line, chordPrompt.column, chordStr));
+    setChordPrompt(null);
+  }
+
   return (
     <div className="editor-wrap" ref={wrapRef} onTouchStart={onInteraction} onWheel={onInteraction}>
       <div
@@ -194,7 +268,24 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
+        onTouchStart={e => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={e => moveLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={cancelLongPress}
+        onTouchCancel={cancelLongPress}
+        onMouseDown={e => startLongPress(e.clientX, e.clientY)}
+        onMouseMove={e => moveLongPress(e.clientX, e.clientY)}
+        onMouseUp={cancelLongPress}
+        onMouseLeave={cancelLongPress}
+        onContextMenu={e => { if (chordPrompt || longPressStart.current) e.preventDefault(); }}
       />
+      {chordPrompt && (
+        <ChordPicker
+          x={chordPrompt.x}
+          y={chordPrompt.y}
+          onPick={handleChordPick}
+          onCancel={() => setChordPrompt(null)}
+        />
+      )}
     </div>
   );
 });
