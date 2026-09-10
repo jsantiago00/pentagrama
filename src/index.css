@@ -490,6 +490,13 @@ input[type=range].v-slider {
 .drum-bpm-row { display: flex; align-items: center; gap: 12px; }
 .drum-bpm-label { font-size: 13px; font-weight: 700; color: var(--accent2); min-width: 66px; font-variant-numeric: tabular-nums; }
 .drum-bpm-slider { flex: 1; accent-color: var(--accent); }
+.drum-bpm-quick { display: flex; gap: 6px; }
+.drum-bpm-chip {
+  flex: 1; font-size: 12px; padding: 6px 0; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text);
+  cursor: pointer; font-family: var(--sans);
+}
+.drum-bpm-chip.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent2); font-weight: 700; }
 .drum-grid { display: flex; flex-direction: column; gap: 8px; }
 .drum-row { display: flex; align-items: center; gap: 8px; }
 .drum-row-label { width: 46px; font-size: 11px; color: var(--text2); flex-shrink: 0; }
@@ -499,10 +506,18 @@ input[type=range].v-slider {
   border: 0.5px solid var(--border2); background: var(--bg3);
   cursor: pointer; padding: 0;
 }
-.drum-step.beat-start { border-left-color: var(--text3); }
+.drum-step.group-start { margin-left: 6px; }
 .drum-step.on { background: var(--accent); border-color: var(--accent); }
 .drum-step.current { outline: 2px solid var(--accent2); outline-offset: 1px; }
-.drum-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.drum-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.drum-preset-chip { display: inline-flex; align-items: stretch; }
+.drum-preset-chip .btn-small { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.drum-preset-del {
+  font-size: 11px; padding: 0 8px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border: 0.5px solid var(--border2); border-left: none; background: var(--bg3); color: var(--text3);
+  cursor: pointer; font-family: var(--sans);
+}
+.drum-preset-del:hover { color: var(--red); background: var(--red-bg); }
 .drum-transport { display: flex; justify-content: center; padding-top: 4px; }
 .btn-small.playing { background: var(--red); border-color: var(--red); color: #fff; }
 

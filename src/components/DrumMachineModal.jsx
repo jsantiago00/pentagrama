@@ -6,6 +6,8 @@ import {
 const TRACK_LABELS = { kick: 'Bombo', snare: 'Redob.', hihat: 'Hi-hat' };
 const BPM_KEY = 'acordes_drum_bpm';
 const PATTERN_KEY = 'acordes_drum_pattern';
+const CUSTOM_PRESETS_KEY = 'acordes_drum_custom_presets';
+const QUICK_BPMS = [60, 80, 100, 120];
 
 function loadSavedPattern() {
   try {
@@ -17,6 +19,18 @@ function loadSavedPattern() {
   return null;
 }
 
+function loadCustomPresets() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function saveCustomPresets(list) {
+  localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(list));
+}
+
 export default function DrumMachineModal({ open, onClose }) {
   const schedulerRef = useRef(null);
   if (!schedulerRef.current) schedulerRef.current = createDrumScheduler();
@@ -25,6 +39,7 @@ export default function DrumMachineModal({ open, onClose }) {
   const [bpm, setBpmState] = useState(() => Number(localStorage.getItem(BPM_KEY)) || 100);
   const [playing, setPlaying] = useState(false);
   const [activeStep, setActiveStep] = useState(-1);
+  const [customPresets, setCustomPresets] = useState(loadCustomPresets);
 
   // El scheduler vive mientras exista este componente (nunca se desmonta,
   // ver App.jsx), así que el loop puede seguir sonando aunque se cierre el
@@ -58,6 +73,27 @@ export default function DrumMachineModal({ open, onClose }) {
     const next = DRUM_PRESETS[key].pattern;
     setPatternState(next);
     persist(next, bpm);
+  }
+
+  function applyCustomPreset(p) {
+    setPatternState(p.pattern);
+    setBpmState(p.bpm);
+    persist(p.pattern, p.bpm);
+  }
+
+  function saveCurrentAsPreset() {
+    const name = window.prompt('Nombre del preset:');
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    const next = [...customPresets, { id: Date.now().toString(), name: trimmed, pattern, bpm }];
+    setCustomPresets(next);
+    saveCustomPresets(next);
+  }
+
+  function deleteCustomPreset(id) {
+    const next = customPresets.filter(p => p.id !== id);
+    setCustomPresets(next);
+    saveCustomPresets(next);
   }
 
   function clearPattern() {
@@ -101,6 +137,15 @@ export default function DrumMachineModal({ open, onClose }) {
             onChange={e => handleBpmChange(Number(e.target.value))}
           />
         </div>
+        <div className="drum-bpm-quick">
+          {QUICK_BPMS.map(v => (
+            <button
+              key={v}
+              className={`drum-bpm-chip${bpm === v ? ' active' : ''}`}
+              onClick={() => handleBpmChange(v)}
+            >{v}</button>
+          ))}
+        </div>
 
         <div className="drum-grid">
           {DRUM_TRACKS.map(track => (
@@ -110,7 +155,7 @@ export default function DrumMachineModal({ open, onClose }) {
                 {pattern[track].map((on, i) => (
                   <button
                     key={i}
-                    className={`drum-step${on ? ' on' : ''}${activeStep === i ? ' current' : ''}${i % 4 === 0 ? ' beat-start' : ''}`}
+                    className={`drum-step${on ? ' on' : ''}${activeStep === i ? ' current' : ''}${i % 4 === 0 && i !== 0 ? ' group-start' : ''}`}
                     onClick={() => toggleStep(track, i)}
                     aria-label={`${TRACK_LABELS[track]} paso ${i + 1}`}
                   />
@@ -124,7 +169,14 @@ export default function DrumMachineModal({ open, onClose }) {
           {Object.entries(DRUM_PRESETS).map(([key, p]) => (
             <button key={key} className="btn-small" onClick={() => applyPreset(key)}>{p.label}</button>
           ))}
+          {customPresets.map(p => (
+            <span className="drum-preset-chip" key={p.id}>
+              <button className="btn-small" onClick={() => applyCustomPreset(p)}>{p.name}</button>
+              <button className="drum-preset-del" title="Borrar preset" onClick={() => deleteCustomPreset(p.id)}>✕</button>
+            </span>
+          ))}
           <button className="btn-small" onClick={clearPattern}>Limpiar</button>
+          <button className="btn-small" onClick={saveCurrentAsPreset}>💾 Guardar preset</button>
         </div>
 
         <div className="drum-transport">

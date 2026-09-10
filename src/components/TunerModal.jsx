@@ -10,12 +10,20 @@ function tuneClass(cents) {
   return 'off';
 }
 
+const MODE_KEY = 'acordes_tuner_mode';
+
 export default function TunerModal({ open, onClose }) {
   const [listening, setListening] = useState(false);
   const [note, setNote] = useState(null); // { name, octave, cents, freq }
   const [error, setError] = useState('');
+  const [mode, setMode] = useState(() => localStorage.getItem(MODE_KEY) || 'guitar');
   const stopRef = useRef(null);
   const historyRef = useRef([]);
+
+  function changeMode(next) {
+    setMode(next);
+    localStorage.setItem(MODE_KEY, next);
+  }
 
   // Si se cierra el panel, soltamos el micrófono (a diferencia de la
   // batería, acá no tiene sentido seguir escuchando de fondo).
@@ -79,6 +87,19 @@ export default function TunerModal({ open, onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
+        <div className="artists-toolbar" style={{ justifyContent: 'center' }}>
+          <button
+            className={`view-toggle-btn${mode === 'guitar' ? ' active' : ''}`}
+            style={{ width: 'auto', padding: '0 12px', fontSize: 12 }}
+            onClick={() => changeMode('guitar')}
+          >🎸 Guitarra</button>
+          <button
+            className={`view-toggle-btn${mode === 'chromatic' ? ' active' : ''}`}
+            style={{ width: 'auto', padding: '0 12px', fontSize: 12 }}
+            onClick={() => changeMode('chromatic')}
+          >🎹 Cromática</button>
+        </div>
+
         {error && <p style={{ fontSize: 12, color: 'var(--red)' }}>{error}</p>}
 
         <div className="tuner-display">
@@ -101,14 +122,20 @@ export default function TunerModal({ open, onClose }) {
           </div>
         </div>
 
-        <div className="tuner-strings">
-          {GUITAR_STRINGS.map((s, i) => (
-            <span
-              key={i}
-              className={`tuner-string-chip${note && note.name === s.name && note.octave === s.octave ? ' active' : ''}`}
-            >{s.name}{s.octave}</span>
-          ))}
-        </div>
+        {mode === 'guitar' ? (
+          <div className="tuner-strings">
+            {GUITAR_STRINGS.map((s, i) => (
+              <span
+                key={i}
+                className={`tuner-string-chip${note && note.name === s.name && note.octave === s.octave ? ' active' : ''}`}
+              >{s.name}{s.octave}</span>
+            ))}
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)' }}>
+            Cualquier nota — ideal para afinaciones alternativas (drop D, medio tono abajo, etc.)
+          </p>
+        )}
 
         <div className="drum-transport">
           {listening ? (
