@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   putSong, putSongs, deleteSongsByIds, replaceArtistOnSongs,
   getArtistMeta, saveArtistMeta,
@@ -41,6 +41,19 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
   const refreshMeta = () => setMetaTick(t => t + 1);
   const groups = useMemo(() => groupByArtist(songs), [songs]);
   const artistMeta = useMemo(() => getArtistMeta(), [metaTick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Como la vista "songs" queda recordada de la sesión anterior, si el
+  // modal se abre directo ahí hay que empujar un nivel extra a la pila de
+  // navegación para que quede en sincro con lo que se ve (si no, "← artistas"
+  // y el botón atrás del celu cerrarían el modal entero de un salto).
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpenRef.current && view === 'songs') {
+      pushNav(goToArtists);
+    }
+    wasOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
