@@ -123,8 +123,13 @@ export function setArtistViewMode(mode) {
   localStorage.setItem(ARTIST_VIEW_KEY, mode);
 }
 
+// Backend de scraping por defecto (Cloudflare Worker propio). Se puede
+// pisar desde la pantalla de "Obtener canciones" si alguna vez se redeploya
+// con otro nombre/cuenta.
+const DEFAULT_SCRAPER_URL = 'https://acordes-scraper.acordes.workers.dev';
+
 export function getScraperUrl() {
-  return localStorage.getItem(SCRAPER_URL_KEY) || '';
+  return localStorage.getItem(SCRAPER_URL_KEY) || DEFAULT_SCRAPER_URL;
 }
 export function setScraperUrl(url) {
   localStorage.setItem(SCRAPER_URL_KEY, url.trim());
