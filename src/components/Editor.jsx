@@ -4,7 +4,7 @@ import { escHtml } from '../lib/utils';
 
 function buildHTML(text, st) {
   if (!text) return '';
-  return text.split('\n').map(line => {
+  const lines = text.split('\n').map(line => {
     if (!isChordLine(line)) return escHtml(line);
     return line.replace(/(\S+)/g, token => {
       if (isChordToken(token)) {
@@ -13,7 +13,16 @@ function buildHTML(text, st) {
       }
       return escHtml(token);
     });
-  }).join('\n');
+  });
+  let html = lines.join('<br>');
+  if (text.endsWith('\n')) {
+    // Un solo <br> al final no alcanza: Chrome lo trata como el cierre de
+    // la línea anterior y no como una línea nueva donde se pueda escribir.
+    // Un segundo <br> "colchón" (que no cuenta como contenido real, ver
+    // extractPlainText) hace que la línea vacía quede realmente editable.
+    html += '<br data-pad="1">';
+  }
+  return html;
 }
 
 function extractPlainText(root) {
@@ -22,7 +31,7 @@ function extractPlainText(root) {
     if (node.nodeType === Node.TEXT_NODE) {
       text += node.textContent;
     } else if (node.nodeName === 'BR') {
-      text += '\n';
+      if (!node.hasAttribute('data-pad')) text += '\n';
     } else if (node.nodeName === 'DIV' || node.nodeName === 'P') {
       if (text && !text.endsWith('\n')) text += '\n';
       node.childNodes.forEach(walk);
@@ -32,7 +41,16 @@ function extractPlainText(root) {
     }
   }
   root.childNodes.forEach(walk);
-  return text.replace(/\n$/, '');
+  return text;
+}
+
+function placeCaret(root, range) {
+  try {
+    root.focus();
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (e) { /* ignore */ }
 }
 
 function restoreCursor(root, offset) {
@@ -41,18 +59,40 @@ function restoreCursor(root, offset) {
   let node;
   while ((node = walker.nextNode())) {
     if (remaining <= node.length) {
-      try {
-        const r = document.createRange();
+      // ¿Queda más texto después de este nodo en todo el editor? El texto
+      // puede estar anidado dentro de un <span class="chord">, así que hay
+      // que preguntarle al walker (recorre todo el árbol), no mirar
+      // node.nextSibling que solo ve hermanos dentro del mismo padre.
+      const isLastTextNode = walker.nextNode() === null;
+      const r = document.createRange();
+      const padBr = root.lastChild?.nodeName === 'BR' && root.lastChild.hasAttribute('data-pad')
+        ? root.lastChild : null;
+      if (remaining === node.length && isLastTextNode && padBr) {
+        // El editor termina en la línea vacía recién creada con Enter (con
+        // su <br> "colchón" al final): el navegador solo reconoce esa línea
+        // como editable si el cursor queda ANTES del colchón, no después.
+        r.setStart(root, root.childNodes.length - 1);
+      } else if (remaining === node.length && isLastTextNode) {
+        // Último nodo de texto de todo el editor: le damos un nodo vacío
+        // real después para que el próximo caracter tenga dónde anclarse.
+        const anchor = document.createTextNode('');
+        node.after(anchor);
+        r.setStart(anchor, 0);
+      } else {
         r.setStart(node, remaining);
-        r.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(r);
-      } catch (e) { /* ignore */ }
+      }
+      r.collapse(true);
+      placeCaret(root, r);
       return;
     }
     remaining -= node.length;
   }
+  // No quedó texto suficiente para el offset pedido (p.ej. el editor
+  // termina en un <br> sin nada después): dejamos el cursor al final.
+  const r = document.createRange();
+  r.selectNodeContents(root);
+  r.collapse(false);
+  placeCaret(root, r);
 }
 
 export default function Editor({ rawText, semitones, onChange, wrapRef, onInteraction }) {
@@ -103,9 +143,9 @@ export default function Editor({ rawText, semitones, onChange, wrapRef, onIntera
       if (!sel.rangeCount) return;
       const range = sel.getRangeAt(0);
       range.deleteContents();
-      const textNode = document.createTextNode('\n');
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
+      const br = document.createElement('br');
+      range.insertNode(br);
+      range.setStartAfter(br);
       range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);
