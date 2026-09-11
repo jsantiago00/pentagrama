@@ -3,6 +3,7 @@ import { isChordLine, isChordToken, transposeToken } from '../lib/chords';
 import { escHtml } from '../lib/utils';
 import { insertChordAbove, wordStartColumn } from '../lib/chordInsert';
 import ChordPicker from './ChordPicker';
+import ChordDiagramCard from './ChordDiagramCard';
 
 const LONG_PRESS_MS = 480;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
@@ -137,6 +138,7 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
   const longPressTimer = useRef(null);
   const longPressStart = useRef(null);
   const [chordPrompt, setChordPrompt] = useState(null); // { line, column, x, y }
+  const [chordDiagram, setChordDiagram] = useState(null); // { chord, x, y }
 
   useImperativeHandle(ref, () => ({
     // Activa contentEditable y enfoca en el mismo tick del click para que
@@ -258,6 +260,16 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
     if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) cancelLongPress();
   }
 
+  // En modo lectura, tocar un acorde ya escrito muestra su diagrama de
+  // digitación (en edición dejamos el click para ubicar el cursor, sin
+  // interferir con el long-press que abre el selector de inserción).
+  function handleChordClick(e) {
+    if (editable) return;
+    const target = e.target.closest('.chord');
+    if (!target) return;
+    setChordDiagram({ chord: target.textContent, x: e.clientX, y: e.clientY });
+  }
+
   function handleChordPick(chordStr) {
     if (!chordPrompt) return;
     const liveText = editorRef.current ? extractPlainText(editorRef.current) : rawText;
@@ -277,6 +289,7 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
+        onClick={handleChordClick}
         onTouchStart={e => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchMove={e => moveLongPress(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchEnd={cancelLongPress}
@@ -293,6 +306,15 @@ const Editor = forwardRef(function Editor({ rawText, semitones, onChange, wrapRe
           y={chordPrompt.y}
           onPick={handleChordPick}
           onCancel={() => setChordPrompt(null)}
+        />
+      )}
+      {chordDiagram && (
+        <ChordDiagramCard
+          key={`${chordDiagram.chord}-${chordDiagram.x}-${chordDiagram.y}`}
+          chord={chordDiagram.chord}
+          x={chordDiagram.x}
+          y={chordDiagram.y}
+          onCancel={() => setChordDiagram(null)}
         />
       )}
     </div>

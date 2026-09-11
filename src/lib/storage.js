@@ -11,6 +11,7 @@ const STORE = 'songs';
 const ARTIST_META_KEY = 'acordes_artist_meta';
 const SEED_FLAG_KEY = 'acordes_seed_v1_done';
 const THEME_KEY = 'acordes_theme';
+const FONT_SIZE_KEY = 'acordes_font_size';
 const ARTIST_VIEW_KEY = 'acordes_artist_view';
 const SCRAPER_URL_KEY = 'acordes_scraper_url';
 
@@ -114,6 +115,15 @@ export function getTheme() {
 }
 export function setTheme(theme) {
   localStorage.setItem(THEME_KEY, theme);
+}
+
+const DEFAULT_FONT_SIZE = 14;
+export function getFontSize() {
+  const v = parseInt(localStorage.getItem(FONT_SIZE_KEY), 10);
+  return Number.isFinite(v) ? v : DEFAULT_FONT_SIZE;
+}
+export function setFontSize(size) {
+  localStorage.setItem(FONT_SIZE_KEY, String(size));
 }
 
 export function getArtistViewMode() {

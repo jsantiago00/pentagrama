@@ -13,7 +13,12 @@ import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
 import { useBackNav } from './hooks/useBackNav';
 import { countUniqueChords, getTransposedPlain } from './lib/chords';
-import { putSong, getTheme, setTheme as persistTheme, seedBundledSongsIfNeeded } from './lib/storage';
+import {
+  putSong, getTheme, setTheme as persistTheme,
+  getFontSize, setFontSize as persistFontSize, seedBundledSongsIfNeeded,
+} from './lib/storage';
+
+const FONT_SIZE_MIN = 11, FONT_SIZE_MAX = 26, FONT_SIZE_STEP = 1;
 
 export default function App() {
   const [rawText, setRawText] = useState('');
@@ -21,6 +26,7 @@ export default function App() {
   const [songTitle, setSongTitle] = useState('');
   const [activeSongId, setActiveSongId] = useState(null);
   const [theme, setThemeState] = useState(getTheme());
+  const [fontSize, setFontSizeState] = useState(getFontSize());
   const [modalSaveOpen, setModalSaveOpen] = useState(false);
   const [modalSongsOpen, setModalSongsOpen] = useState(false);
   const [drumOpen, setDrumOpen] = useState(false);
@@ -69,6 +75,14 @@ export default function App() {
     clearTimeout(toastTimer.current);
     setToast(null);
     showToast('↩️ Restaurado');
+  }
+
+  function changeFontSize(delta) {
+    setFontSizeState(s => {
+      const next = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, s + delta));
+      persistFontSize(next);
+      return next;
+    });
   }
 
   function toggleTheme() {
@@ -183,7 +197,7 @@ export default function App() {
         onOpenRhymeFinder={openRhymeFinder}
       />
 
-      <div className="main">
+      <div className="main" style={{ '--editor-font-size': `${fontSize}px` }}>
         <Editor
           ref={editorHandleRef}
           rawText={rawText}
@@ -202,6 +216,9 @@ export default function App() {
           onUp={() => setSemitones(s => Math.max(-11, Math.min(11, s + 1)))}
           onDown={() => setSemitones(s => Math.max(-11, Math.min(11, s - 1)))}
           onReset={() => setSemitones(0)}
+          fontSize={fontSize}
+          onFontUp={() => changeFontSize(FONT_SIZE_STEP)}
+          onFontDown={() => changeFontSize(-FONT_SIZE_STEP)}
           onCopy={handleCopy}
           onOpenSongs={openSongsModal}
         />

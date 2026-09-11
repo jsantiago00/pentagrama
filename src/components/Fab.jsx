@@ -1,6 +1,7 @@
 export default function Fab({
   scrolling, onToggleScroll, speed, onSpeedChange,
   semitones, onUp, onDown, onReset,
+  fontSize, onFontUp, onFontDown,
   onCopy, onOpenSongs,
 }) {
   return (
@@ -30,6 +31,12 @@ export default function Fab({
       <div className="semi-display">{semitones === 0 ? '0' : (semitones > 0 ? '+' : '') + semitones}</div>
       <button className="fab-btn" title="Bajar semitono" onClick={onDown}>−</button>
       <button className="fab-btn" title="Resetear" style={{ fontSize: 13 }} onClick={onReset}>↺</button>
+
+      <div className="fab-divider" />
+
+      <button className="fab-btn" title="Agrandar letra" onClick={onFontUp} style={{ fontSize: 12, fontWeight: 700 }}>A+</button>
+      <div className="semi-display" title="Tamaño de letra">{fontSize}</div>
+      <button className="fab-btn" title="Achicar letra" onClick={onFontDown} style={{ fontSize: 12, fontWeight: 700 }}>A−</button>
 
       <div className="fab-divider" />
 

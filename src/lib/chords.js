@@ -18,11 +18,32 @@ function transposeRoot(root, st) {
   return CHROMATIC[((idx + st) % 12 + 12) % 12];
 }
 
+const CHORD_TOKEN_RE = /^(Do|Re|Mi|Fa|Sol|La|Si|[A-G])(#|b)?(maj|min|m|M|aug|dim|sus|add)?(\d*)?(\(\d+\))?(°|º|\+)?(\/([A-G](?:#|b)?))?$/;
+
 export function isSingleChord(t) {
   if (!t) return false;
-  const m = t.match(/^(Do|Re|Mi|Fa|Sol|La|Si|[A-G])(#|b)?(maj|min|m|M|aug|dim|sus|add)?(\d*)?(\(\d+\))?(°|º|\+)?(\/([A-G](?:#|b)?))?$/);
+  const m = t.match(CHORD_TOKEN_RE);
   if (!m) return false;
   return EN_ROOTS.has(m[1]) || ES_ROOTS.has(m[1]);
+}
+
+// Descompone un token ya identificado como acorde (raíz, calidad, bajo) para
+// que quien necesite datos estructurados (p.ej. el buscador de diagramas de
+// digitación) no tenga que reimplementar el regex de arriba.
+export function parseChordToken(t) {
+  if (!t) return null;
+  const single = t.includes('-') ? t.split('-')[0] : t;
+  const m = single.match(CHORD_TOKEN_RE);
+  if (!m) return null;
+  if (!EN_ROOTS.has(m[1]) && !ES_ROOTS.has(m[1])) return null;
+  const root = normalizeRoot(m[1] + (m[2] || ''));
+  let quality = (m[3] || '') + (m[4] || '');
+  if (!quality) {
+    if (m[6] === '°' || m[6] === 'º') quality = 'dim';
+    else if (m[6] === '+') quality = 'aug';
+  }
+  const bass = m[8] ? normalizeRoot(m[8]) : null;
+  return { root, quality, bass };
 }
 
 export function isChordToken(t) {

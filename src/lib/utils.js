@@ -9,3 +9,13 @@ export function normalizeSource(url) {
   if (!url) return url;
   return url.toLowerCase().replace(/([^:])\/{2,}/g, '$1/').replace(/\/$/, '');
 }
+
+// Nombre corto del sitio de origen de una canción importada, a partir de su
+// URL "source". Se usa para distinguir versiones repetidas de un mismo tema
+// que se bajaron de lacuerda.net y de cifraclub.com a la vez.
+export function getSourceLabel(url) {
+  if (!url) return null;
+  if (/lacuerda\.net/i.test(url)) return 'lacuerda.net';
+  if (/cifraclub\.com/i.test(url)) return 'cifraclub.com';
+  return null;
+}

@@ -37,21 +37,32 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
   async function handleConfirmDownload() {
     setPhase('fetching');
     abortRef.current = false;
-    setProgress({ done: 0, total: listResult.songs.length, failed: 0 });
+    const totalAll = listResult.sources.reduce((acc, s) => acc + s.songs.length, 0);
+    setProgress({ done: 0, total: totalAll, failed: 0 });
     try {
-      const { results, errors } = await fetchAllSongs(
-        getScraperUrl(),
-        listResult,
-        p => setProgress(p),
-        () => abortRef.current
-      );
+      const allResults = [];
+      const allErrors = [];
+      let doneBase = 0, failedBase = 0;
+      for (const source of listResult.sources) {
+        if (abortRef.current) break;
+        const { results, errors } = await fetchAllSongs(
+          getScraperUrl(),
+          source,
+          p => setProgress({ done: doneBase + p.done, total: totalAll, failed: failedBase + p.failed }),
+          () => abortRef.current
+        );
+        allResults.push(...results);
+        allErrors.push(...errors);
+        doneBase += source.songs.length;
+        failedBase += errors.length;
+      }
       const existingKeys = new Set(existingSongs.map(s => normalizeSource(s.source) || s.id));
-      const nuevas = results.filter(s => !existingKeys.has(normalizeSource(s.source)));
-      const yaExistian = results.length - nuevas.length;
+      const nuevas = allResults.filter(s => !existingKeys.has(normalizeSource(s.source)));
+      const yaExistian = allResults.length - nuevas.length;
       if (nuevas.length) await putSongs(nuevas);
       const parts = [`✅ ${nuevas.length} importadas`];
       if (yaExistian) parts.push(`${yaExistian} ya existían`);
-      if (errors.length) parts.push(`⚠️ ${errors.length} fallaron`);
+      if (allErrors.length) parts.push(`⚠️ ${allErrors.length} fallaron`);
       showToast(parts.join(' — '));
       onClose();
     } catch (e) {
@@ -119,9 +130,16 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
             {phase === 'confirm' && listResult && (
               <>
                 <p style={{ fontSize: 13 }}>
-                  Se encontraron <strong>{listResult.songs.length}</strong> canciones de <strong>{listResult.artist}</strong> ({listResult.site === 'v1' ? 'lacuerda.net' : 'cifraclub.com'}).
+                  Se encontraron{' '}
+                  <strong>{listResult.sources.reduce((acc, s) => acc + s.songs.length, 0)}</strong> canciones:{' '}
+                  {listResult.sources.map((s, i) => (
+                    <span key={s.site}>
+                      {i > 0 ? ' y ' : ''}
+                      <strong>{s.songs.length}</strong> en {s.site === 'v1' ? 'lacuerda.net' : 'cifraclub.com'}
+                    </span>
+                  ))}.
                 </p>
-                <p style={{ fontSize: 12, color: 'var(--text2)' }}>Las que ya tengas guardadas no se van a duplicar.</p>
+                <p style={{ fontSize: 12, color: 'var(--text2)' }}>Las que ya tengas guardadas no se van a duplicar; si una misma canción aparece en las dos fuentes, se importan ambas y se distinguen por su origen.</p>
                 <div className="modal-actions">
                   <button className="btn-small" onClick={() => setPhase('idle')}>Volver</button>
                   <button className="btn-small primary" onClick={handleConfirmDownload}>📥 Descargar e importar</button>

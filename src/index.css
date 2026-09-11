@@ -126,7 +126,7 @@ body.light .theme-switch .knob { transform: translateX(16px); }
 
 #editor {
   font-family: var(--mono);
-  font-size: 14px;
+  font-size: var(--editor-font-size, 14px);
   line-height: 1.9;
   color: var(--text);
   white-space: pre-wrap;
@@ -397,6 +397,7 @@ input[type=range].v-slider {
 .sc-info { flex: 1; min-width: 0; }
 .sc-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.sc-source { color: var(--accent2); }
 .sc-del { background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 3px 5px; border-radius: 5px; flex-shrink: 0; }
 .sc-del:hover { color: var(--red); background: var(--red-bg); }
 .sc-fav { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; padding: 3px 5px; border-radius: 5px; flex-shrink: 0; line-height: 1; }
@@ -485,6 +486,41 @@ input[type=range].v-slider {
   font-size: 12px; color: var(--text3); background: none; border: none;
   cursor: pointer; padding: 2px 0; font-family: var(--sans);
 }
+
+/* ── Diagrama de digitación (tap sobre un acorde en modo lectura) ── */
+.chord-diagram-card {
+  position: fixed;
+  z-index: 150;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--bg2); border: 0.5px solid var(--border2);
+  border-radius: 20px; padding: 14px 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.4);
+  animation: chordPickerIn .14s ease;
+}
+.cdc-title { font-size: 15px; font-weight: 700; color: var(--accent2); font-family: var(--sans); }
+.cdc-bass { font-size: 12px; font-weight: 500; color: var(--text2); }
+.cdc-empty { font-size: 12px; color: var(--text2); font-family: var(--sans); max-width: 160px; text-align: center; padding: 10px 0; }
+.cdc-nav {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--text2); font-family: var(--sans);
+}
+.cdc-nav button {
+  width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid var(--border2);
+  background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; font-family: var(--sans);
+}
+.cdc-nav button:hover { border-color: var(--accent); color: var(--accent2); }
+
+.chord-diagram-svg .cd-string { stroke: var(--text3); stroke-width: 1; }
+.chord-diagram-svg .cd-fretline { stroke: var(--border2); stroke-width: 1; }
+.chord-diagram-svg .cd-nut { fill: var(--text2); }
+.chord-diagram-svg .cd-basefret { fill: var(--text2); font-size: 10px; font-family: var(--sans); }
+.chord-diagram-svg .cd-mute, .chord-diagram-svg .cd-open { fill: none; }
+.chord-diagram-svg text.cd-mute { fill: var(--text3); font-size: 11px; font-family: var(--sans); }
+.chord-diagram-svg circle.cd-open { fill: none; stroke: var(--text2); stroke-width: 1.5; }
+.chord-diagram-svg circle.cd-dot { fill: var(--accent); }
+.chord-diagram-svg .cd-barre { fill: var(--accent); opacity: .55; }
+.chord-diagram-svg text.cd-finger { fill: #fff; font-size: 10px; font-weight: 700; font-family: var(--sans); }
 
 /* ── Caja de ritmos ── */
 .drum-bpm-row { display: flex; align-items: center; gap: 12px; }

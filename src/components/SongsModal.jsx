@@ -6,7 +6,7 @@ import {
 } from '../lib/storage';
 import { useSongs } from '../hooks/useSongs';
 import FetchSongsModal from './FetchSongsModal';
-import { normalizeSource } from '../lib/utils';
+import { normalizeSource, getSourceLabel } from '../lib/utils';
 
 function groupByArtist(songs) {
   const map = {};
@@ -210,6 +210,15 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
   if (filter) songList = songList.filter(s => s.title.toLowerCase().includes(filter));
   songList = [...songList].sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
 
+  // Si dos canciones del mismo artista comparten título (típicamente porque
+  // se importaron de lacuerda.net y de cifraclub.com), mostramos de dónde
+  // salió cada una para poder distinguirlas.
+  const titleCounts = {};
+  for (const s of songList) {
+    const key = s.title.trim().toLowerCase();
+    titleCounts[key] = (titleCounts[key] || 0) + 1;
+  }
+
   const modalTitle = view === 'artists' ? 'Canciones' : (currentArtist === '__none__' ? 'Sin artista' : currentArtist);
 
   return (
@@ -323,7 +332,12 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
                   >{s.fav ? '★' : '☆'}</button>
                   <div className="sc-info">
                     <div className="sc-title">{s.title}</div>
-                    <div className="sc-meta">{s.updated || s.created || ''}</div>
+                    <div className="sc-meta">
+                      {s.updated || s.created || ''}
+                      {titleCounts[s.title.trim().toLowerCase()] > 1 && getSourceLabel(s.source) && (
+                        <span className="sc-source"> · {getSourceLabel(s.source)}</span>
+                      )}
+                    </div>
                   </div>
                   {!selectionMode && (
                     <button className="sc-del" title="Eliminar" onClick={e => { e.stopPropagation(); deleteSong(s); }}>🗑</button>
