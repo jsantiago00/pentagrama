@@ -3,29 +3,19 @@ import { mkdirSync } from 'node:fs';
 
 mkdirSync('public/icons', { recursive: true });
 
-// Ícono: diagrama de acorde estilizado (mástil + trastes + dedos) sobre fondo degradado violeta.
-function chordDiagramSvg({ size, bgInset = 0, iconScale = 1 }) {
+// Ícono de PentaGrama: nota musical vibrando (un puntito con ondas de
+// sonido a los costados), sobre el mismo fondo degradado violeta que
+// tenía el ícono anterior. El path viene 1:1 del SVG de 24x24 elegido
+// para la marca; wrappeamos en un <g scale=...> para llevarlo al tamaño
+// real del ícono sin tener que reescribir las coordenadas a mano.
+function pentagramaIconSvg({ size, bgInset = 0, iconScale = 1 }) {
   const bg = bgInset > 0
     ? `<rect x="${bgInset}" y="${bgInset}" width="${size - bgInset * 2}" height="${size - bgInset * 2}" rx="${(size - bgInset * 2) * 0.22}" fill="url(#g)"/>`
     : `<rect width="${size}" height="${size}" fill="url(#g)"/>`;
 
   const s = size * iconScale;
   const off = (size - s) / 2;
-  const strokeW = s * 0.045;
-  const dotR = s * 0.052;
-  // Coordenadas del diagrama de acorde en un cuadro s x s
-  const left = s * 0.28, right = s * 0.72;
-  const top = s * 0.22, bottom = s * 0.78;
-  const stringXs = [left, left + (right - left) / 3, left + (right - left) * 2 / 3, right];
-  const fretYs = [top, top + (bottom - top) / 3, top + (bottom - top) * 2 / 3, bottom];
-
-  const strings = stringXs.map(x => `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="white" stroke-width="${strokeW}" stroke-linecap="round"/>`).join('');
-  const frets = fretYs.map((y, i) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="white" stroke-width="${i === 0 ? strokeW * 1.8 : strokeW}" stroke-linecap="round"/>`).join('');
-  const dots = [
-    [stringXs[0], (fretYs[0] + fretYs[1]) / 2],
-    [stringXs[2], (fretYs[1] + fretYs[2]) / 2],
-    [stringXs[3], (fretYs[0] + fretYs[1]) / 2],
-  ].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${dotR}" fill="white"/>`).join('');
+  const zoom = s / 24;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs>
@@ -35,7 +25,11 @@ function chordDiagramSvg({ size, bgInset = 0, iconScale = 1 }) {
       </linearGradient>
     </defs>
     ${bg}
-    <g transform="translate(${off},${off})">${strings}${frets}${dots}</g>
+    <g transform="translate(${off},${off}) scale(${zoom})" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="2.2"/>
+      <path d="M12 3v6.5M9 4.3l1.6 5.3M15 4.3l-1.6 5.3"/>
+      <path d="M6 12.5c1.5 3 2 5.5 1 8M18 12.5c-1.5 3-2 5.5-1 8"/>
+    </g>
   </svg>`;
 }
 
@@ -47,12 +41,12 @@ const targets = [
 ];
 
 for (const t of targets) {
-  const svg = chordDiagramSvg({ size: t.size, bgInset: 0, iconScale: t.iconScale });
+  const svg = pentagramaIconSvg({ size: t.size, bgInset: 0, iconScale: t.iconScale });
   await sharp(Buffer.from(svg)).png().toFile(t.file);
   console.log('wrote', t.file);
 }
 
 // Favicon (SVG liviano, sin fondo redondeado, tal como pide el navegador)
-const faviconSvg = chordDiagramSvg({ size: 64, iconScale: 1 });
+const faviconSvg = pentagramaIconSvg({ size: 64, iconScale: 1 });
 await sharp(Buffer.from(faviconSvg)).resize(64, 64).png().toFile('public/icons/favicon.png');
 console.log('wrote public/icons/favicon.png');

@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/favicon.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Acordes',
-        short_name: 'Acordes',
-        description: 'Transcriptor y transpositor de acordes, offline.',
+        name: 'PentaGrama',
+        short_name: 'PentaGrama',
+        description: 'Escribí, buscá, leé, afiná y armá bases rítmicas: todo en una sola app offline.',
         theme_color: '#0f0f12',
         background_color: '#0f0f12',
         display: 'standalone',
@@ -28,18 +28,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-        // Los JSON de canciones precargadas se cachean aparte, con su propia estrategia,
-        // porque pesan varios MB y no cambian una vez publicados.
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.includes('/data/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'acordes-data',
-              expiration: { maxEntries: 60 },
-            },
-          },
-        ],
       },
     }),
   ],

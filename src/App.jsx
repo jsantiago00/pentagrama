@@ -8,14 +8,19 @@ import SongsModal from './components/SongsModal';
 import DrumMachineModal from './components/DrumMachineModal';
 import TunerModal from './components/TunerModal';
 import RhymeFinderModal from './components/RhymeFinderModal';
+import PaletteModal from './components/PaletteModal';
+import OnboardingTour from './components/OnboardingTour';
 import Toast from './components/Toast';
 import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
 import { useBackNav } from './hooks/useBackNav';
 import { countUniqueChords, getTransposedPlain } from './lib/chords';
+import { TOUR_STEPS } from './lib/tourSteps';
+import { getPaletteId, setPaletteId as persistPaletteId, applyPalette } from './lib/palette';
 import {
   putSong, getTheme, setTheme as persistTheme,
-  getFontSize, setFontSize as persistFontSize, seedBundledSongsIfNeeded,
+  getFontSize, setFontSize as persistFontSize,
+  getOnboardingDone, setOnboardingDone,
 } from './lib/storage';
 
 const FONT_SIZE_MIN = 11, FONT_SIZE_MAX = 26, FONT_SIZE_STEP = 1;
@@ -32,6 +37,9 @@ export default function App() {
   const [drumOpen, setDrumOpen] = useState(false);
   const [tunerOpen, setTunerOpen] = useState(false);
   const [rhymeOpen, setRhymeOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteId, setPaletteIdState] = useState(getPaletteId());
+  const [tourStep, setTourStep] = useState(() => (getOnboardingDone() ? null : 0));
   const [toast, setToast] = useState(null);
   // Arranca editable (documento en blanco, listo para escribir); al cargar
   // una canción pasa a solo-lectura para que deslizar/scrollear en el celu
@@ -46,17 +54,42 @@ export default function App() {
   const { pushNav, goBack } = useBackNav();
 
   useEffect(() => {
-    seedBundledSongsIfNeeded();
-  }, []);
-
-  useEffect(() => {
     document.body.classList.toggle('light', theme === 'light');
-  }, [theme]);
+    applyPalette(paletteId, theme);
+  }, [theme, paletteId]);
 
   // Si la canción activa se borró desde el modal, soltamos la referencia.
   useEffect(() => {
     if (activeSongId && !songs.some(s => s.id === activeSongId)) setActiveSongId(null);
   }, [songs, activeSongId]);
+
+  // Cada paso del minitutorial deja la app mostrando la pantalla real que
+  // describe (carpeta de canciones, afinador, caja de ritmos, etc.) en vez
+  // de solo explicarla con texto. Usa los setters de estado directo (no
+  // pushNav) para no ensuciar la pila de navegación del botón "atrás".
+  useEffect(() => {
+    if (tourStep === null) return;
+    const id = TOUR_STEPS[tourStep].id;
+    if (id === 'titulo' || id === 'letra' || id === 'acordes') {
+      setModalSongsOpen(false); setTunerOpen(false); setDrumOpen(false);
+      setEditMode(true);
+      setSongTitle(id === 'titulo' ? 'Título de tu canción' : '');
+      setRawText(id === 'letra' ? 'Acá escribís la letra de tu canción' : id === 'acordes' ? 'Do\nAcá escribís la letra de tu canción' : '');
+    } else if (id === 'buscar' || id === 'leer') {
+      setSongTitle(''); setRawText('');
+      setTunerOpen(false); setDrumOpen(false);
+      setModalSongsOpen(true);
+    } else if (id === 'afinador') {
+      setModalSongsOpen(false); setDrumOpen(false);
+      setTunerOpen(true);
+    } else if (id === 'ritmo') {
+      setModalSongsOpen(false); setTunerOpen(false);
+      setDrumOpen(true);
+    } else if (id === 'extras') {
+      setModalSongsOpen(false); setTunerOpen(false); setDrumOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourStep]);
 
   const showToast = useCallback((msg) => {
     clearTimeout(toastTimer.current);
@@ -169,6 +202,29 @@ export default function App() {
     setRhymeOpen(true);
   }
 
+  function openPalette() {
+    pushNav(() => setPaletteOpen(false));
+    setPaletteOpen(true);
+  }
+
+  function pickPalette(id) {
+    persistPaletteId(id);
+    setPaletteIdState(id);
+  }
+
+  function endTour() {
+    setOnboardingDone();
+    setTourStep(null);
+    setModalSongsOpen(false); setTunerOpen(false); setDrumOpen(false);
+    setSongTitle(''); setRawText(''); setSemitones(0);
+    setEditMode(true);
+  }
+
+  function nextTourStep() {
+    if (tourStep < TOUR_STEPS.length - 1) setTourStep(s => s + 1);
+    else endTour();
+  }
+
   function loadSong(song) {
     setRawText(song.text);
     setSongTitle(song.title);
@@ -229,6 +285,7 @@ export default function App() {
         semitones={semitones}
         onNew={handleNew}
         onSave={openSaveModal}
+        onOpenPalette={openPalette}
       />
 
       <SaveModal
@@ -253,8 +310,13 @@ export default function App() {
       <DrumMachineModal open={drumOpen} onClose={() => goBack(1)} />
       <TunerModal open={tunerOpen} onClose={() => goBack(1)} />
       <RhymeFinderModal open={rhymeOpen} onClose={() => goBack(1)} />
+      <PaletteModal open={paletteOpen} paletteId={paletteId} onPick={pickPalette} onClose={() => goBack(1)} />
 
       <Toast toast={toast} onUndo={handleUndo} />
+
+      {tourStep !== null && (
+        <OnboardingTour stepIndex={tourStep} onNext={nextTourStep} onSkip={endTour} />
+      )}
     </div>
   );
 }

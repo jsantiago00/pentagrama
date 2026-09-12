@@ -56,6 +56,13 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
         doneBase += source.songs.length;
         failedBase += errors.length;
       }
+      // El backend arma "artist" a partir del slug de la URL (con guiones/
+      // guiones bajos), no del nombre real; lo pisamos con lo que la
+      // persona tipeó para que la carpeta quede con el nombre buscado
+      // (y para que, si el mismo artista salió de las dos fuentes con
+      // slugs distintos, las dos terminen agrupadas en una sola carpeta).
+      const searchedArtist = query.trim();
+      for (const s of allResults) s.artist = searchedArtist;
       const existingKeys = new Set(existingSongs.map(s => normalizeSource(s.source) || s.id));
       const nuevas = allResults.filter(s => !existingKeys.has(normalizeSource(s.source)));
       const yaExistian = allResults.length - nuevas.length;

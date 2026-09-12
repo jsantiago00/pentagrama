@@ -235,8 +235,8 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
               <button className={`view-toggle-btn${artistViewMode === 'grid' ? ' active' : ''}`} title="Vista en cajas" onClick={() => setViewMode('grid')}>⊞</button>
               <button className={`view-toggle-btn${artistViewMode === 'list' ? ' active' : ''}`} title="Vista en lista" onClick={() => setViewMode('list')}>☰</button>
             </div>
-            <div className={`artist-grid${artistViewMode === 'list' ? ' list-view' : ''}`}>
-              {!songs.length && <div className="empty-state" style={{ gridColumn: '1/-1' }}>🗂️<br />No hay canciones guardadas.</div>}
+            <div className={`artist-grid${artistViewMode === 'list' ? ' list-view' : ''}`} data-tour="artist-grid">
+              {!songs.length && <div className="empty-state" style={{ gridColumn: '1/-1' }}>🔎<br />Buscá un artista para tocar sus canciones.</div>}
               {artistKeys.map(key => {
                 const label = key === '__none__' ? 'Sin artista' : key;
                 const emoji = key === '__none__' ? '🗂️' : artistEmoji(key);
@@ -272,7 +272,7 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
               })}
             </div>
             <div className="io-icons">
-              <button className="btn-io" title="Buscar e importar canciones de un artista" onClick={openFetchModal}>🔎 Obtener</button>
+              <button className="btn-io" data-tour="buscar-btn" title="Buscar e importar canciones de un artista" onClick={openFetchModal}>🔎 Obtener</button>
               <button className="btn-io" title="Importar canciones desde un archivo" onClick={importarCanciones}>📥 Importar</button>
               <button className="btn-io" title="Exportar todas mis canciones a un archivo" onClick={exportarCanciones}>📤 Exportar</button>
               <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChosen} />
