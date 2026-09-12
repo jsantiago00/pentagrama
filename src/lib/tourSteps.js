@@ -17,7 +17,7 @@ export const TOUR_STEPS = [
     id: 'acordes',
     target: '#editor',
     title: 'Escribir canciones (3 de 3)',
-    text: 'Si dejás presionada una palabra, se abre un selector para ponerle un acorde arriba.',
+    text: 'Si dejás presionada una palabra, se abre un selector para ponerle un acorde arriba. Y si no sabés cómo se hace un acorde, tocalo y te muestra dónde poner los dedos.',
     example: 'Do (Do mayor)',
   },
   {
