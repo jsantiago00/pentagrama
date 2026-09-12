@@ -21,6 +21,12 @@ export const TOUR_STEPS = [
     example: 'Do (Do mayor)',
   },
   {
+    id: 'canciones',
+    target: '[data-tour="songs-btn"]',
+    title: 'Tus canciones',
+    text: 'Acá están tus canciones guardadas.',
+  },
+  {
     id: 'buscar',
     target: '[data-tour="buscar-btn"]',
     title: 'Buscar canciones',

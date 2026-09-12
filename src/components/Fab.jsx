@@ -41,7 +41,7 @@ export default function Fab({
       <div className="fab-divider" />
 
       <button className="fab-btn" title="Copiar" onClick={onCopy}>📋</button>
-      <button className="fab-btn" title="Canciones guardadas" onClick={onOpenSongs}>🗂️</button>
+      <button className="fab-btn" data-tour="songs-btn" title="Canciones guardadas" onClick={onOpenSongs}>🗂️</button>
     </div>
   );
 }
