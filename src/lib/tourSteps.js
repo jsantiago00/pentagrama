@@ -21,6 +21,12 @@ export const TOUR_STEPS = [
     example: 'Do (Do mayor)',
   },
   {
+    id: 'rimas',
+    target: '[data-tour="rhyme-btn"]',
+    title: 'Buscador de rimas',
+    text: 'Ahí arriba tenés un buscador de palabras por si te quedás sin ideas: busca entre todas tus canciones guardadas.',
+  },
+  {
     id: 'canciones',
     target: '[data-tour="songs-btn"]',
     title: 'Tus canciones',

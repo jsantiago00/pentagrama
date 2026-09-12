@@ -623,17 +623,26 @@ input[type=range].v-slider {
 }
 
 /* ── Minitutorial ── */
+/* El oscurecido lo pone únicamente el box-shadow de .tour-spotlight (ver
+   más abajo): así el recorte queda realmente transparente, mostrando el
+   color real de lo que señala. Si acá le sumáramos también un fondo
+   oscuro propio, ese fondo taparía igual el recorte y el ícono señalado
+   quedaría tan oscurecido como el resto (justo el bug que teníamos). */
 .tour-overlay {
   position: fixed; inset: 0; z-index: 300;
-  background: rgba(0,0,0,.6);
+  background: transparent;
 }
 .tour-spotlight {
   position: fixed; border-radius: 14px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,.68);
-  border: 1.5px solid var(--accent2);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.72);
+  border: 2px solid var(--accent2);
   transition: top .2s ease, left .2s ease, width .2s ease, height .2s ease;
   pointer-events: none;
 }
+/* Mientras todavía no se midió el target (primer instante de cada paso)
+   no hay .tour-spotlight en el DOM; oscurecemos toda la pantalla para no
+   dejar la app sin overlay ese toque. */
+.tour-overlay.no-target { background: rgba(0,0,0,.72); }
 .tour-tooltip {
   position: fixed; z-index: 301;
   width: min(300px, calc(100vw - 28px));

@@ -50,7 +50,7 @@ export default function OnboardingTour({ stepIndex, onNext, onSkip }) {
   const isLast = stepIndex === TOUR_STEPS.length - 1;
 
   return (
-    <div className="tour-overlay">
+    <div className={`tour-overlay${rect ? '' : ' no-target'}`}>
       {rect && (
         <div
           className="tour-spotlight"

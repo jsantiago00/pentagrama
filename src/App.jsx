@@ -70,7 +70,7 @@ export default function App() {
   useEffect(() => {
     if (tourStep === null) return;
     const id = TOUR_STEPS[tourStep].id;
-    if (id === 'titulo' || id === 'letra' || id === 'acordes' || id === 'canciones') {
+    if (id === 'titulo' || id === 'letra' || id === 'acordes' || id === 'rimas' || id === 'canciones') {
       setModalSongsOpen(false); setTunerOpen(false); setDrumOpen(false);
       setEditMode(true);
       setSongTitle(id === 'titulo' ? 'Título de tu canción' : '');
