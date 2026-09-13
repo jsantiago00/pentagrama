@@ -386,6 +386,8 @@ input[type=range].v-slider {
 }
 .search-input:focus { border-color: var(--accent); }
 .song-list { display: flex; flex-direction: column; gap: 5px; }
+.fetch-song-list { max-height: 40dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.fetch-song-source { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 4px; }
 .song-card {
   display: flex; align-items: center; gap: 10px;
   background: var(--bg3); border: 0.5px solid var(--border);
@@ -523,6 +525,9 @@ input[type=range].v-slider {
 .chord-diagram-svg text.cd-finger { fill: #fff; font-size: 10px; font-weight: 700; font-family: var(--sans); }
 
 /* ── Caja de ritmos ── */
+.drum-sig-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.drum-sig-row .drum-bpm-chip { flex: 0 0 auto; padding: 6px 10px; }
+.drum-bpm-hint { font-size: 11px; color: var(--text3); margin: -6px 0 0; text-align: center; }
 .drum-bpm-row { display: flex; align-items: center; gap: 12px; }
 .drum-bpm-label { font-size: 13px; font-weight: 700; color: var(--accent2); min-width: 66px; font-variant-numeric: tabular-nums; }
 .drum-bpm-slider { flex: 1; accent-color: var(--accent); }
@@ -667,6 +672,16 @@ input[type=range].v-slider {
 .tour-dots { display: flex; gap: 4px; }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
 .tour-dot.active { background: var(--accent2); }
+
+/* Indicador de descarga en 2° plano (visible al cerrar "Obtener canciones" mientras sigue bajando) */
+.download-badge {
+  position: fixed; bottom: 104px; left: 50%; transform: translateX(-50%);
+  background: var(--accent-bg); border: 0.5px solid var(--accent);
+  color: var(--accent2); font-size: 12.5px; font-weight: 600;
+  padding: 8px 16px; border-radius: 24px; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25); z-index: 998;
+  font-family: var(--sans); white-space: nowrap;
+}
 
 /* Toast */
 .toast {

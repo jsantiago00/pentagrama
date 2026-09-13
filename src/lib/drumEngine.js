@@ -3,18 +3,38 @@
 // 100% offline. El scheduling usa el patrón estándar de "lookahead" para que
 // el pulso no se desincronice con setTimeout/setInterval crudo.
 
-export const DRUM_STEPS = 16;
 export const DRUM_TRACKS = ['kick', 'snare', 'hihat'];
 
 const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD_S = 0.1;
 
-export function makeEmptyPattern() {
-  return {
-    kick: Array(DRUM_STEPS).fill(false),
-    snare: Array(DRUM_STEPS).fill(false),
-    hihat: Array(DRUM_STEPS).fill(false),
-  };
+// Compases disponibles. `beats` es la cantidad de pulsos del compás y
+// `stepsPerBeat` cuántos pasos entran en cada pulso (4 = semicorcheas para
+// compases simples, 3 = corcheas para compases compuestos, que se sienten
+// "ternarios" en grupos de 3). `steps` = beats * stepsPerBeat, y también se
+// usa como tamaño de grupo visual (una separación cada `stepsPerBeat` pasos).
+// El BPM siempre representa el pulso principal del compás (la negra en los
+// simples, la negra con puntillo en los compuestos).
+export const TIME_SIGNATURES = {
+  '2/4': { label: '2/4', beats: 2, stepsPerBeat: 4, compound: false },
+  '3/4': { label: '3/4', beats: 3, stepsPerBeat: 4, compound: false },
+  '4/4': { label: '4/4', beats: 4, stepsPerBeat: 4, compound: false },
+  '6/8': { label: '6/8', beats: 2, stepsPerBeat: 3, compound: true },
+  '9/8': { label: '9/8', beats: 3, stepsPerBeat: 3, compound: true },
+  '12/8': { label: '12/8', beats: 4, stepsPerBeat: 3, compound: true },
+};
+
+export const DEFAULT_TIME_SIG = '4/4';
+
+export function stepsForTimeSig(sigKey) {
+  const sig = TIME_SIGNATURES[sigKey] || TIME_SIGNATURES[DEFAULT_TIME_SIG];
+  return sig.beats * sig.stepsPerBeat;
+}
+
+export function makeEmptyPattern(steps) {
+  const p = {};
+  for (const track of DRUM_TRACKS) p[track] = Array(steps).fill(false);
+  return p;
 }
 
 function patternFromBits(bits) {
@@ -23,30 +43,93 @@ function patternFromBits(bits) {
   return p;
 }
 
+// Presets agrupados por compás: cada uno trae un patrón con la cantidad de
+// pasos correcta para ese compás, así el usuario tiene un punto de partida
+// sin tener que programar los pasos a mano.
 export const DRUM_PRESETS = {
-  basico: {
-    label: 'Básico',
-    pattern: patternFromBits({
-      kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hihat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }),
+  '4/4': {
+    basico: {
+      label: 'Básico',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        hihat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+      }),
+    },
+    cuatro: {
+      label: 'Four on the floor',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+        snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      }),
+    },
+    balada: {
+      label: 'Balada',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        hihat: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      }),
+    },
   },
-  cuatro: {
-    label: 'Four on the floor',
-    pattern: patternFromBits({
-      kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    }),
+  '3/4': {
+    vals: {
+      label: 'Vals',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+        hihat: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0],
+      }),
+    },
   },
-  balada: {
-    label: 'Balada',
-    pattern: patternFromBits({
-      kick: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-      snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hihat: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-    }),
+  '2/4': {
+    marcha: {
+      label: 'Marcha',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 1, 0, 0, 0],
+        snare: [0, 0, 0, 0, 1, 0, 0, 0],
+        hihat: [1, 0, 1, 0, 1, 0, 1, 0],
+      }),
+    },
+  },
+  '6/8': {
+    balada68: {
+      label: 'Balada 6/8',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 1, 0, 0],
+        hihat: [1, 1, 1, 1, 1, 1],
+      }),
+    },
+    shuffle: {
+      label: 'Shuffle',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 1, 0, 0],
+        snare: [0, 0, 0, 1, 0, 0],
+        hihat: [1, 0, 1, 1, 0, 1],
+      }),
+    },
+  },
+  '9/8': {
+    basico98: {
+      label: 'Básico',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 1, 0, 0, 1, 0, 0],
+        hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+      }),
+    },
+  },
+  '12/8': {
+    balada128: {
+      label: 'Balada 12/8',
+      pattern: patternFromBits({
+        kick: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        snare: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      }),
+    },
   },
 };
 
@@ -123,7 +206,9 @@ export function createDrumScheduler() {
   let nextStepTime = 0;
   let playing = false;
   let bpm = 100;
-  let pattern = makeEmptyPattern();
+  let stepsPerBeat = 4;
+  let steps = 16;
+  let pattern = makeEmptyPattern(steps);
   let notesInQueue = [];
   let onStepChange = null;
 
@@ -141,7 +226,7 @@ export function createDrumScheduler() {
   }
 
   function secondsPerStep() {
-    return 60 / bpm / 4; // patrones de semicorcheas, 16 pasos por compás de 4/4
+    return 60 / bpm / stepsPerBeat;
   }
 
   function scheduleStep(step, time) {
@@ -155,7 +240,7 @@ export function createDrumScheduler() {
     while (nextStepTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
       scheduleStep(currentStep, nextStepTime);
       nextStepTime += secondsPerStep();
-      currentStep = (currentStep + 1) % DRUM_STEPS;
+      currentStep = (currentStep + 1) % steps;
     }
     timerId = setTimeout(schedulerLoop, LOOKAHEAD_MS);
   }
@@ -191,7 +276,15 @@ export function createDrumScheduler() {
     },
     isPlaying() { return playing; },
     setBpm(v) { bpm = v; },
-    setPattern(p) { pattern = p; },
+    // El patrón manda: la cantidad de pasos del loop se toma de su longitud,
+    // así queda sincronizado con el compás elegido sin tener que avisar dos
+    // veces (el patrón siempre se recalcula al cambiar de compás).
+    setPattern(p) {
+      pattern = p;
+      steps = p[DRUM_TRACKS[0]]?.length || steps;
+      if (currentStep >= steps) currentStep = 0;
+    },
+    setStepsPerBeat(n) { stepsPerBeat = n; },
     setOnStepChange(cb) { onStepChange = cb; },
     destroy() {
       this.stop();

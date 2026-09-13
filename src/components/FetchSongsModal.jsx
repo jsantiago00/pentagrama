@@ -1,17 +1,14 @@
-import { useRef, useState } from 'react';
-import { fetchArtistList, fetchAllSongs } from '../lib/scraperClient';
-import { getScraperUrl, setScraperUrl, putSongs } from '../lib/storage';
-import { normalizeSource } from '../lib/utils';
+import { useState } from 'react';
+import { getScraperUrl, setScraperUrl } from '../lib/storage';
 
-export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
+export default function FetchSongsModal({ open, onClose, download, existingSongs }) {
   const [workerUrl, setWorkerUrl] = useState(getScraperUrl());
   const [editingUrl, setEditingUrl] = useState(!getScraperUrl());
   const [query, setQuery] = useState('');
-  const [phase, setPhase] = useState('idle'); // idle | searching | confirm | fetching | error
-  const [listResult, setListResult] = useState(null);
-  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
-  const [errorMsg, setErrorMsg] = useState('');
-  const abortRef = useRef(false);
+
+  const { phase, listResult, selected, progress, errorMsg } = download;
+
+  if (!open) return null;
 
   function saveUrl() {
     const trimmed = workerUrl.trim();
@@ -20,70 +17,22 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
     setEditingUrl(false);
   }
 
-  async function handleSearch() {
-    if (!query.trim()) return;
-    setPhase('searching');
-    setErrorMsg('');
-    try {
-      const data = await fetchArtistList(getScraperUrl(), query.trim());
-      setListResult(data);
-      setPhase('confirm');
-    } catch (e) {
-      setErrorMsg(e.message);
-      setPhase('error');
-    }
-  }
-
-  async function handleConfirmDownload() {
-    setPhase('fetching');
-    abortRef.current = false;
-    const totalAll = listResult.sources.reduce((acc, s) => acc + s.songs.length, 0);
-    setProgress({ done: 0, total: totalAll, failed: 0 });
-    try {
-      const allResults = [];
-      const allErrors = [];
-      let doneBase = 0, failedBase = 0;
-      for (const source of listResult.sources) {
-        if (abortRef.current) break;
-        const { results, errors } = await fetchAllSongs(
-          getScraperUrl(),
-          source,
-          p => setProgress({ done: doneBase + p.done, total: totalAll, failed: failedBase + p.failed }),
-          () => abortRef.current
-        );
-        allResults.push(...results);
-        allErrors.push(...errors);
-        doneBase += source.songs.length;
-        failedBase += errors.length;
-      }
-      // El backend arma "artist" a partir del slug de la URL (con guiones/
-      // guiones bajos), no del nombre real; lo pisamos con lo que la
-      // persona tipeó para que la carpeta quede con el nombre buscado
-      // (y para que, si el mismo artista salió de las dos fuentes con
-      // slugs distintos, las dos terminen agrupadas en una sola carpeta).
-      const searchedArtist = query.trim();
-      for (const s of allResults) s.artist = searchedArtist;
-      const existingKeys = new Set(existingSongs.map(s => normalizeSource(s.source) || s.id));
-      const nuevas = allResults.filter(s => !existingKeys.has(normalizeSource(s.source)));
-      const yaExistian = allResults.length - nuevas.length;
-      if (nuevas.length) await putSongs(nuevas);
-      const parts = [`✅ ${nuevas.length} importadas`];
-      if (yaExistian) parts.push(`${yaExistian} ya existían`);
-      if (allErrors.length) parts.push(`⚠️ ${allErrors.length} fallaron`);
-      showToast(parts.join(' — '));
-      onClose();
-    } catch (e) {
-      setErrorMsg(e.message);
-      setPhase('error');
-    }
+  function handleSearch() {
+    download.search(query);
   }
 
   function handleCancelFetch() {
-    abortRef.current = true;
+    download.cancelFetch();
   }
 
+  function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  const totalFound = listResult?.sources.reduce((acc, s) => acc + s.songs.length, 0) || 0;
+
   return (
-    <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay open" onClick={handleOverlayClick}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-title">Obtener canciones</span>
@@ -137,19 +86,46 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
             {phase === 'confirm' && listResult && (
               <>
                 <p style={{ fontSize: 13 }}>
-                  Se encontraron{' '}
-                  <strong>{listResult.sources.reduce((acc, s) => acc + s.songs.length, 0)}</strong> canciones:{' '}
-                  {listResult.sources.map((s, i) => (
-                    <span key={s.site}>
-                      {i > 0 ? ' y ' : ''}
-                      <strong>{s.songs.length}</strong> en {s.site === 'v1' ? 'lacuerda.net' : 'cifraclub.com'}
-                    </span>
-                  ))}.
+                  Se encontraron <strong>{totalFound}</strong> canciones. Elegí cuáles importar:
                 </p>
-                <p style={{ fontSize: 12, color: 'var(--text2)' }}>Las que ya tengas guardadas no se van a duplicar; si una misma canción aparece en las dos fuentes, se importan ambas y se distinguen por su origen.</p>
+                <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
+                  <button className="btn-small" onClick={() => download.selectAll(true)}>Todas</button>
+                  <button className="btn-small" onClick={() => download.selectAll(false)}>Ninguna</button>
+                  <span style={{ fontSize: 12, color: 'var(--text2)', alignSelf: 'center' }}>
+                    {selected.size} seleccionada{selected.size !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="fetch-song-list">
+                  {listResult.sources.map(source => (
+                    <div key={source.site}>
+                      <p className="fetch-song-source">{source.site === 'v1' ? 'lacuerda.net' : 'cifraclub.com'}</p>
+                      <div className="song-list">
+                        {source.songs.map(s => {
+                          const key = `${source.site}::${s.href}`;
+                          const isChecked = selected.has(key);
+                          return (
+                            <div
+                              key={key}
+                              className={`song-card${isChecked ? ' checked' : ''}`}
+                              onClick={() => download.toggleSong(source.site, s.href)}
+                            >
+                              <span className="sc-checkbox">✓</span>
+                              <div className="sc-info">
+                                <div className="sc-title">{s.title}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text2)' }}>Las que ya tengas guardadas no se van a duplicar.</p>
                 <div className="modal-actions">
-                  <button className="btn-small" onClick={() => setPhase('idle')}>Volver</button>
-                  <button className="btn-small primary" onClick={handleConfirmDownload}>📥 Descargar e importar</button>
+                  <button className="btn-small" onClick={download.backToSearch}>Volver</button>
+                  <button className="btn-small primary" disabled={!selected.size} onClick={() => download.confirmDownload(existingSongs)}>
+                    📥 Descargar e importar ({selected.size})
+                  </button>
                 </div>
               </>
             )}
@@ -164,7 +140,9 @@ export default function FetchSongsModal({ onClose, showToast, existingSongs }) {
                   }} />
                 </div>
                 {progress.failed > 0 && <p style={{ fontSize: 12, color: 'var(--text2)' }}>{progress.failed} fallaron hasta ahora</p>}
+                <p style={{ fontSize: 12, color: 'var(--text2)' }}>Podés cerrar esta pantalla: la descarga sigue en segundo plano.</p>
                 <div className="modal-actions">
+                  <button className="btn-small" onClick={onClose}>Seguir en 2° plano</button>
                   <button className="btn-small" onClick={handleCancelFetch}>Detener e importar lo bajado</button>
                 </div>
               </>

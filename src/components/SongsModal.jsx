@@ -5,7 +5,6 @@ import {
   getArtistViewMode, setArtistViewMode as persistArtistViewMode,
 } from '../lib/storage';
 import { useSongs } from '../hooks/useSongs';
-import FetchSongsModal from './FetchSongsModal';
 import { normalizeSource, getSourceLabel } from '../lib/utils';
 
 function groupByArtist(songs) {
@@ -25,7 +24,7 @@ function artistEmoji(name) {
   return pool[h % pool.length];
 }
 
-export default function SongsModal({ open, activeSongId, onLoadSong, showToast, showUndoToast, pushNav, goBack }) {
+export default function SongsModal({ open, activeSongId, onLoadSong, showToast, showUndoToast, pushNav, goBack, onOpenFetch }) {
   const songs = useSongs();
   const [metaTick, setMetaTick] = useState(0);
   const [view, setView] = useState('artists');
@@ -35,7 +34,6 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [artistViewMode, setArtistViewModeState] = useState(getArtistViewMode());
   const [openMenu, setOpenMenu] = useState(null);
-  const [fetchOpen, setFetchOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const refreshMeta = () => setMetaTick(t => t + 1);
@@ -150,11 +148,6 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
     deleteSongsByIds([...ids]).then(() => {
       showUndoToast(`🗑️ ${removed.length} eliminadas`, () => putSongs(removed));
     });
-  }
-
-  function openFetchModal() {
-    pushNav(() => setFetchOpen(false));
-    setFetchOpen(true);
   }
 
   function importarCanciones() {
@@ -272,16 +265,12 @@ export default function SongsModal({ open, activeSongId, onLoadSong, showToast, 
               })}
             </div>
             <div className="io-icons">
-              <button className="btn-io" data-tour="buscar-btn" title="Buscar e importar canciones de un artista" onClick={openFetchModal}>🔎 Obtener</button>
+              <button className="btn-io" data-tour="buscar-btn" title="Buscar e importar canciones de un artista" onClick={onOpenFetch}>🔎 Obtener</button>
               <button className="btn-io" title="Importar canciones desde un archivo" onClick={importarCanciones}>📥 Importar</button>
               <button className="btn-io" title="Exportar todas mis canciones a un archivo" onClick={exportarCanciones}>📤 Exportar</button>
               <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChosen} />
             </div>
           </div>
-        )}
-
-        {fetchOpen && (
-          <FetchSongsModal onClose={() => goBack(1)} showToast={showToast} existingSongs={songs} />
         )}
 
         {view === 'songs' && (

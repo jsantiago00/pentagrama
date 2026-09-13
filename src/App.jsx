@@ -5,6 +5,7 @@ import Fab from './components/Fab';
 import BottomBar from './components/BottomBar';
 import SaveModal from './components/SaveModal';
 import SongsModal from './components/SongsModal';
+import FetchSongsModal from './components/FetchSongsModal';
 import DrumMachineModal from './components/DrumMachineModal';
 import TunerModal from './components/TunerModal';
 import RhymeFinderModal from './components/RhymeFinderModal';
@@ -14,6 +15,7 @@ import Toast from './components/Toast';
 import { useAutoscroll } from './hooks/useAutoscroll';
 import { useSongs } from './hooks/useSongs';
 import { useBackNav } from './hooks/useBackNav';
+import { useSongDownload } from './hooks/useSongDownload';
 import { countUniqueChords, getTransposedPlain } from './lib/chords';
 import { TOUR_STEPS } from './lib/tourSteps';
 import { getPaletteId, setPaletteId as persistPaletteId, applyPalette } from './lib/palette';
@@ -34,6 +36,7 @@ export default function App() {
   const [fontSize, setFontSizeState] = useState(getFontSize());
   const [modalSaveOpen, setModalSaveOpen] = useState(false);
   const [modalSongsOpen, setModalSongsOpen] = useState(false);
+  const [fetchOpen, setFetchOpen] = useState(false);
   const [drumOpen, setDrumOpen] = useState(false);
   const [tunerOpen, setTunerOpen] = useState(false);
   const [rhymeOpen, setRhymeOpen] = useState(false);
@@ -102,6 +105,10 @@ export default function App() {
     setToast({ msg, undo: restoreFn });
     toastTimer.current = setTimeout(() => setToast(null), 5000);
   }, []);
+
+  // Vive acá (no adentro del modal) para que la descarga de canciones siga
+  // corriendo en segundo plano aunque se cierre la pantalla de "Obtener".
+  const download = useSongDownload(showToast);
 
   function handleUndo() {
     if (toast?.undo) toast.undo();
@@ -185,6 +192,15 @@ export default function App() {
   function openSongsModal() {
     pushNav(() => setModalSongsOpen(false));
     setModalSongsOpen(true);
+  }
+
+  function openFetchModal() {
+    if (!modalSongsOpen) {
+      pushNav(() => setModalSongsOpen(false));
+      setModalSongsOpen(true);
+    }
+    pushNav(() => setFetchOpen(false));
+    setFetchOpen(true);
   }
 
   function openDrumMachine() {
@@ -305,7 +321,21 @@ export default function App() {
         showUndoToast={showUndoToast}
         pushNav={pushNav}
         goBack={goBack}
+        onOpenFetch={openFetchModal}
       />
+
+      <FetchSongsModal
+        open={fetchOpen}
+        onClose={() => goBack(1)}
+        download={download}
+        existingSongs={songs}
+      />
+
+      {download.phase === 'fetching' && !fetchOpen && (
+        <button className="download-badge" onClick={openFetchModal}>
+          ⬇ Descargando {download.progress.done}/{download.progress.total}…
+        </button>
+      )}
 
       <DrumMachineModal open={drumOpen} onClose={() => goBack(1)} />
       <TunerModal open={tunerOpen} onClose={() => goBack(1)} />
