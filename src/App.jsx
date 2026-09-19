@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { runImportQueue } from './lib/importQueue';
 import Header from './components/Header';
 import Editor from './components/Editor';
 import Fab from './components/Fab';
@@ -250,6 +251,24 @@ export default function App() {
     setEditMode(false);
     showToast(`🎵 "${song.title}" cargada`);
   }
+
+  // Corre una sola vez al abrir: si SoltArte (u otra app del dominio) dejó
+  // canciones para importar, las suma a la biblioteca y, si es una sola
+  // canción nueva, la abre directo en el editor.
+  useEffect(() => {
+    runImportQueue().then((result) => {
+      if (!result) return;
+      const { imported, skipped } = result;
+      if (!imported.length) {
+        showToast(`ℹ️ Ya tenías esa${skipped !== 1 ? 's' : ''} canción${skipped !== 1 ? 'es' : ''}`);
+        return;
+      }
+      const skippedNote = skipped ? ` (${skipped} ya existía${skipped !== 1 ? 'n' : ''})` : '';
+      showToast(`✅ ${imported.length} canción${imported.length !== 1 ? 'es' : ''} importada${imported.length !== 1 ? 's' : ''} desde SoltArte${skippedNote}`);
+      if (imported.length === 1) loadSong(imported[0]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const existingArtistOptions = Array.from(new Set(songs.map(s => (s.artist || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es'));
   const currentSongForSave = activeSongId ? songs.find(s => s.id === activeSongId) : null;
