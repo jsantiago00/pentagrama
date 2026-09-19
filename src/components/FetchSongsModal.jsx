@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getScraperUrl, setScraperUrl } from '../lib/storage';
 
 export default function FetchSongsModal({ open, onClose, download, existingSongs }) {
   const [workerUrl, setWorkerUrl] = useState(getScraperUrl());
   const [editingUrl, setEditingUrl] = useState(!getScraperUrl());
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('');
 
   const { phase, listResult, selected, progress, errorMsg } = download;
+
+  useEffect(() => { setFilter(''); }, [listResult]);
 
   if (!open) return null;
 
@@ -30,6 +33,17 @@ export default function FetchSongsModal({ open, onClose, download, existingSongs
   }
 
   const totalFound = listResult?.sources.reduce((acc, s) => acc + s.songs.length, 0) || 0;
+
+  function normalize(s) {
+    return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  }
+
+  const normalizedFilter = normalize(filter.trim());
+  const visibleSources = normalizedFilter
+    ? listResult?.sources
+        .map(source => ({ ...source, songs: source.songs.filter(s => normalize(s.title).includes(normalizedFilter)) }))
+        .filter(source => source.songs.length > 0)
+    : listResult?.sources;
 
   return (
     <div className="modal-overlay open" onClick={handleOverlayClick}>
@@ -95,8 +109,17 @@ export default function FetchSongsModal({ open, onClose, download, existingSongs
                     {selected.size} seleccionada{selected.size !== 1 ? 's' : ''}
                   </span>
                 </div>
+                <input
+                  className="modal-input"
+                  placeholder="Filtrar por título…"
+                  value={filter}
+                  onChange={e => setFilter(e.target.value)}
+                />
                 <div className="fetch-song-list">
-                  {listResult.sources.map(source => (
+                  {visibleSources.length === 0 && (
+                    <p style={{ fontSize: 12, color: 'var(--text2)' }}>Ninguna canción coincide con el filtro.</p>
+                  )}
+                  {visibleSources.map(source => (
                     <div key={source.site}>
                       <p className="fetch-song-source">{source.site === 'v1' ? 'lacuerda.net' : 'cifraclub.com'}</p>
                       <div className="song-list">
