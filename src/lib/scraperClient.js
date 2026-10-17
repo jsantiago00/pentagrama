@@ -27,20 +27,38 @@ function chunk(arr, size) {
   return out;
 }
 
-// Descarga todas las canciones de la lista en tandas, informando progreso.
-// onProgress({ done, total, failed }). shouldAbort() para cancelar entre tandas.
-export async function fetchAllSongs(workerUrl, { site, artist, songs, batchLimit }, onProgress, shouldAbort) {
+// Descarga en tandas. Cada tanda se entrega a onBatchResults y se espera a
+// que se guarde antes de seguir, así la biblioteca queda disponible mientras
+// las tandas siguientes todavía se están descargando.
+export async function fetchAllSongs(
+  workerUrl,
+  { site, artist, songs, batchLimit },
+  onProgress,
+  shouldAbort,
+  onBatchResults
+) {
   const batches = chunk(songs, batchLimit || 15);
   const results = [];
   const errors = [];
   let done = 0;
+
   for (const batch of batches) {
     if (shouldAbort && shouldAbort()) break;
-    const { results: batchResults, errors: batchErrors } = await fetchSongsBatch(workerUrl, site, artist, batch);
+
+    const { results: batchResults, errors: batchErrors } =
+      await fetchSongsBatch(workerUrl, site, artist, batch);
+
     results.push(...batchResults);
     errors.push(...batchErrors);
+
+    // Persistir esta tanda antes de informar que está completamente lista.
+    if (batchResults.length && onBatchResults) {
+      await onBatchResults(batchResults);
+    }
+
     done += batch.length;
     onProgress?.({ done, total: songs.length, failed: errors.length });
   }
+
   return { results, errors };
 }
