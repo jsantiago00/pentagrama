@@ -6,13 +6,13 @@ import { normalizeSource } from '../lib/utils';
 function songKey(site, href) { return `${site}::${href}`; }
 
 // Maneja todo el ciclo "buscar artista -> elegir canciones -> descargar e
-// importar". Vive en App (no dentro del modal), así que si el usuario cierra
-// la pantalla de "Obtener canciones" mientras se está descargando, la
-// descarga sigue corriendo en segundo plano en vez de cortarse.
+// importar". Vive en App para que la descarga continúe en segundo plano.
+// Cada tanda se guarda en IndexedDB en cuanto llega, sin esperar a que termine
+// toda la discografía: la biblioteca se actualiza gracias a subscribeSongs.
 export function useSongDownload(showToast) {
   const [phase, setPhase] = useState('idle'); // idle | searching | confirm | fetching | error
-  const [listResult, setListResult] = useState(null); // { sources: [{site, artist, songs, batchLimit}] }
-  const [selected, setSelected] = useState(new Set()); // claves site::href elegidas
+  const [listResult, setListResult] = useState(null);
+  const [selected, setSelected] = useState(new Set());
   const [query, setQuery] = useState('');
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [errorMsg, setErrorMsg] = useState('');
@@ -79,40 +79,60 @@ export function useSongDownload(showToast) {
     abortRef.current = false;
     const totalAll = sourcesFiltered.reduce((acc, s) => acc + s.songs.length, 0);
     setProgress({ done: 0, total: totalAll, failed: 0 });
+
+    // La clave de origen evita duplicados entre tandas y también contra la
+    // biblioteca que ya existía al comenzar la descarga.
+    const seenKeys = new Set(existingSongs.map(s => normalizeSource(s.source) || s.id));
+    const searchedArtist = query.trim();
+    let importedCount = 0;
+    let alreadyExistedCount = 0;
+    let doneBase = 0;
+    let failedBase = 0;
+
     try {
-      const allResults = [];
       const allErrors = [];
-      let doneBase = 0, failedBase = 0;
       for (const source of sourcesFiltered) {
         if (abortRef.current) break;
-        const { results, errors } = await fetchAllSongs(
+        const { errors } = await fetchAllSongs(
           getScraperUrl(),
           source,
           p => setProgress({ done: doneBase + p.done, total: totalAll, failed: failedBase + p.failed }),
-          () => abortRef.current
+          () => abortRef.current,
+          async batchResults => {
+            // Guardar cada tanda apenas llega. La lista de canciones se
+            // refresca inmediatamente, incluso si la descarga sigue activa.
+            const nuevas = [];
+            for (const song of batchResults) {
+              song.artist = searchedArtist;
+              const key = normalizeSource(song.source) || song.id;
+              if (seenKeys.has(key)) {
+                alreadyExistedCount++;
+              } else {
+                seenKeys.add(key);
+                nuevas.push(song);
+              }
+            }
+            if (nuevas.length) {
+              await putSongs(nuevas);
+              importedCount += nuevas.length;
+            }
+          }
         );
-        allResults.push(...results);
         allErrors.push(...errors);
         doneBase += source.songs.length;
         failedBase += errors.length;
       }
-      // El backend arma "artist" a partir del slug de la URL (con guiones/
-      // guiones bajos), no del nombre real; lo pisamos con lo que la
-      // persona tipeó para que la carpeta quede con el nombre buscado.
-      const searchedArtist = query.trim();
-      for (const s of allResults) s.artist = searchedArtist;
-      const existingKeys = new Set(existingSongs.map(s => normalizeSource(s.source) || s.id));
-      const nuevas = allResults.filter(s => !existingKeys.has(normalizeSource(s.source)));
-      const yaExistian = allResults.length - nuevas.length;
-      if (nuevas.length) await putSongs(nuevas);
-      const parts = [`✅ ${nuevas.length} importadas`];
-      if (yaExistian) parts.push(`${yaExistian} ya existían`);
+
+      const parts = [`✅ ${importedCount} importadas`];
+      if (alreadyExistedCount) parts.push(`${alreadyExistedCount} ya existían`);
       if (allErrors.length) parts.push(`⚠️ ${allErrors.length} fallaron`);
+      if (abortRef.current) parts.push('descarga detenida; se conservaron las canciones descargadas');
       showToast(parts.join(' — '));
       reset();
     } catch (e) {
       setErrorMsg(e.message);
       setPhase('error');
+      showToast('⚠️ La descarga se interrumpió; las canciones ya guardadas se conservaron');
     }
   }
 
